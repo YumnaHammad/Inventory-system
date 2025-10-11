@@ -1,0 +1,774 @@
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { ShoppingCart, Plus, Package, DollarSign, Calendar, Clock, Filter, RefreshCw, FileText, Receipt, CheckCircle, AlertCircle } from 'lucide-react';
+import CenteredLoader from '../components/CenteredLoader';
+import { useLocation, useNavigate } from 'react-router-dom';
+import PurchaseFormPage from './forms/PurchaseFormPage';
+import api from '../services/api';
+import ExportButton from '../components/ExportButton';
+import { generateDocument } from '../utils/documentGenerator';
+import toast from 'react-hot-toast';
+
+const Purchases = () => {
+  const [loading, setLoading] = useState(true);
+  const [purchases, setPurchases] = useState([]);
+  const [newlyAddedPurchaseId, setNewlyAddedPurchaseId] = useState(null);
+  const [purchaseStats, setPurchaseStats] = useState({
+    totalPurchases: 0,
+    totalItems: 0,
+    totalValue: 0
+  });
+  const [timeFilter, setTimeFilter] = useState('all'); // all, day, week, month
+  const [refreshing, setRefreshing] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Fetch purchases data
+  const fetchPurchases = async () => {
+    try {
+      setRefreshing(true);
+      const response = await api.get('/purchases?limit=1000'); // Fetch all purchases
+      let purchasesData = response.data?.purchases || [];
+      
+      // Check for temporary purchases in localStorage (newly created ones)
+      const tempPurchases = JSON.parse(localStorage.getItem('tempPurchases') || '[]');
+      if (tempPurchases.length > 0) {
+        // Merge temporary purchases with API data, avoiding duplicates
+        const apiPurchaseIds = new Set(purchasesData.map(p => p._id));
+        const newTempPurchases = tempPurchases.filter(p => !apiPurchaseIds.has(p._id));
+        purchasesData = [...newTempPurchases, ...purchasesData];
+        
+        // Clear temporary purchases after merging
+        localStorage.removeItem('tempPurchases');
+      }
+      
+      // Debug: Log the received data
+      console.log('API Response:', response.data);
+      console.log('Purchases Data:', purchasesData);
+      console.log('Number of purchases:', purchasesData.length);
+      
+      // Always use real data from API, even if empty
+      setPurchases(purchasesData);
+      
+      // Calculate stats from real data (will be 0 if no purchases)
+      const stats = {
+        totalPurchases: purchasesData.length,
+        totalItems: purchasesData.reduce((sum, purchase) => 
+          sum + (purchase.items ? purchase.items.reduce((itemSum, item) => itemSum + item.quantity, 0) : 0), 0),
+        totalValue: purchasesData.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0)
+      };
+      
+      setPurchaseStats(stats);
+      
+      // Debug: Log the calculated stats
+      console.log('Calculated Stats:', stats);
+      
+      // If no real data exists, show a helpful message instead of dummy data
+      if (purchasesData.length === 0) {
+        console.log('No purchases found in database');
+      } else {
+        console.log('Successfully loaded', purchasesData.length, 'purchases from database');
+      }
+      
+    } catch (error) {
+      console.error('Error fetching purchases:', error);
+      console.error('Full error details:', error.response?.data || error.message);
+      
+      // Set empty state if API fails
+      setPurchases([]);
+      setPurchaseStats({
+        totalPurchases: 0,
+        totalItems: 0,
+        totalValue: 0
+      });
+      
+      // Show error message to user
+      toast.error('Failed to load purchases from database. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Load dummy data for demonstration
+  const loadDummyData = () => {
+    const dummyPurchases = [
+        {
+          _id: '1',
+          purchaseNumber: 'PUR-0001',
+          supplierId: { name: 'Tech Supplies Ltd' },
+          items: [
+            { productId: { name: 'Laptop Dell XPS 13' }, quantity: 5, unitPrice: 85000, totalPrice: 425000 },
+            { productId: { name: 'Wireless Mouse' }, quantity: 10, unitPrice: 2500, totalPrice: 25000 }
+          ],
+          totalAmount: 450000,
+          status: 'received',
+          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+          receivedDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+          notes: 'Bulk order for office setup',
+          paymentMethod: 'Bank Transfer'
+        },
+        {
+          _id: '2',
+          purchaseNumber: 'PUR-0002',
+          supplierId: { name: 'Office Furniture Co' },
+          items: [
+            { productId: { name: 'Office Chair' }, quantity: 15, unitPrice: 15000, totalPrice: 225000 },
+            { productId: { name: 'Desk Lamp' }, quantity: 20, unitPrice: 3500, totalPrice: 70000 }
+          ],
+          totalAmount: 295000,
+          status: 'received',
+          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
+          receivedDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
+          notes: 'Furniture for new office space',
+          paymentMethod: 'Credit Card'
+        },
+        {
+          _id: '3',
+          purchaseNumber: 'PUR-0003',
+          supplierId: { name: 'Stationery World' },
+          items: [
+            { productId: { name: 'A4 Paper (500 sheets)' }, quantity: 50, unitPrice: 800, totalPrice: 40000 },
+            { productId: { name: 'Blue Pens (Box of 12)' }, quantity: 25, unitPrice: 1200, totalPrice: 30000 },
+            { productId: { name: 'Notebooks (A5)' }, quantity: 30, unitPrice: 500, totalPrice: 15000 }
+          ],
+          totalAmount: 85000,
+          status: 'received',
+          createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week ago
+          receivedDate: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(), // 6 days ago
+          notes: 'Monthly stationery restock',
+          paymentMethod: 'Cash'
+        },
+        {
+          _id: '4',
+          purchaseNumber: 'PUR-0004',
+          supplierId: { name: 'Tech Supplies Ltd' },
+          items: [
+            { productId: { name: 'Monitor 24" LED' }, quantity: 8, unitPrice: 25000, totalPrice: 200000 },
+            { productId: { name: 'Keyboard Mechanical' }, quantity: 8, unitPrice: 8000, totalPrice: 64000 }
+          ],
+          totalAmount: 264000,
+          status: 'received',
+          createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago
+          receivedDate: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(), // 9 days ago
+          notes: 'Equipment for new employees',
+          paymentMethod: 'Bank Transfer'
+        },
+        {
+          _id: '5',
+          purchaseNumber: 'PUR-0005',
+          supplierId: { name: 'Cleaning Supplies Inc' },
+          items: [
+            { productId: { name: 'Disinfectant Spray' }, quantity: 20, unitPrice: 1200, totalPrice: 24000 },
+            { productId: { name: 'Paper Towels (Pack of 12)' }, quantity: 10, unitPrice: 1800, totalPrice: 18000 },
+            { productId: { name: 'Trash Bags Large' }, quantity: 15, unitPrice: 900, totalPrice: 13500 }
+          ],
+          totalAmount: 55500,
+          status: 'received',
+          createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), // 2 weeks ago
+          receivedDate: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString(), // 13 days ago
+          notes: 'Office cleaning supplies',
+          paymentMethod: 'Cash'
+        }
+      ];
+      
+      setPurchases(dummyPurchases);
+      
+      // Calculate stats from dummy data
+      const stats = {
+        totalPurchases: dummyPurchases.length,
+        totalItems: dummyPurchases.reduce((sum, purchase) => 
+          sum + purchase.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0),
+        totalValue: dummyPurchases.reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0)
+      };
+      
+      setPurchaseStats(stats);
+  };
+
+  useEffect(() => {
+    fetchPurchases();
+  }, []);
+
+  // Check for temporary purchases on component mount
+  useEffect(() => {
+    const tempPurchases = JSON.parse(localStorage.getItem('tempPurchases') || '[]');
+    if (tempPurchases.length > 0) {
+      // Add temporary purchases to the current state
+      setPurchases(prev => {
+        const existingIds = new Set(prev.map(p => p._id));
+        const newPurchases = tempPurchases.filter(p => !existingIds.has(p._id));
+        if (newPurchases.length > 0) {
+          // Update stats
+          setPurchaseStats(prevStats => {
+            const newStats = { ...prevStats };
+            newPurchases.forEach(purchase => {
+              newStats.totalPurchases += 1;
+              newStats.totalItems += purchase.items ? 
+                purchase.items.reduce((sum, item) => sum + item.quantity, 0) : 0;
+              newStats.totalValue += purchase.totalAmount || 0;
+            });
+            return newStats;
+          });
+          
+          // Highlight the most recent purchase
+          if (newPurchases[0]) {
+            setNewlyAddedPurchaseId(newPurchases[0]._id);
+            setTimeout(() => setNewlyAddedPurchaseId(null), 3000);
+          }
+          
+          return [...newPurchases, ...prev];
+        }
+        return prev;
+      });
+      
+      // Clear temporary purchases after adding to state
+      localStorage.removeItem('tempPurchases');
+    }
+  }, []);
+
+  // Refresh data when navigating back from purchase form
+  useEffect(() => {
+    if (location.state?.refresh) {
+      // If we have the new purchase data, add it to state immediately
+      if (location.state.newPurchase) {
+        const newPurchase = location.state.newPurchase;
+        setPurchases(prev => [newPurchase, ...prev]);
+        
+        // Highlight the newly added purchase
+        setNewlyAddedPurchaseId(newPurchase._id);
+        
+        // Clear highlight after 3 seconds
+        setTimeout(() => setNewlyAddedPurchaseId(null), 3000);
+        
+        // Update stats immediately
+        setPurchaseStats(prev => ({
+          totalPurchases: prev.totalPurchases + 1,
+          totalItems: prev.totalItems + (newPurchase.items ? 
+            newPurchase.items.reduce((sum, item) => sum + item.quantity, 0) : 0),
+          totalValue: prev.totalValue + (newPurchase.totalAmount || 0)
+        }));
+        
+        // Show success toast if not already shown
+        if (typeof window !== 'undefined' && window.toast) {
+          window.toast.success(`Purchase ${newPurchase.purchaseNumber} added successfully!`, {
+            duration: 3000
+          });
+        }
+      } else {
+        // Fallback to fetching all data
+      fetchPurchases();
+      }
+      
+      // Clear the refresh state
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, navigate, location.pathname]);
+
+  // Refresh data when component becomes visible (e.g., after navigation)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Check for temporary purchases first
+        const tempPurchases = JSON.parse(localStorage.getItem('tempPurchases') || '[]');
+        if (tempPurchases.length > 0) {
+          // Merge temporary purchases with current state
+          setPurchases(prev => {
+            const existingIds = new Set(prev.map(p => p._id));
+            const newPurchases = tempPurchases.filter(p => !existingIds.has(p._id));
+            if (newPurchases.length > 0) {
+              // Update stats
+              setPurchaseStats(prevStats => {
+                const newStats = { ...prevStats };
+                newPurchases.forEach(purchase => {
+                  newStats.totalPurchases += 1;
+                  newStats.totalItems += purchase.items ? 
+                    purchase.items.reduce((sum, item) => sum + item.quantity, 0) : 0;
+                  newStats.totalValue += purchase.totalAmount || 0;
+                });
+                return newStats;
+              });
+              
+              // Highlight the most recent purchase
+              if (newPurchases[0]) {
+                setNewlyAddedPurchaseId(newPurchases[0]._id);
+                setTimeout(() => setNewlyAddedPurchaseId(null), 3000);
+              }
+              
+              return [...newPurchases, ...prev];
+            }
+            return prev;
+          });
+          
+          // Clear temporary purchases
+          localStorage.removeItem('tempPurchases');
+        } else {
+        fetchPurchases();
+        }
+      }
+    };
+
+    const handleFocus = () => {
+      handleVisibilityChange();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
+  // Filter purchases by time period
+  const getFilteredPurchases = () => {
+    if (timeFilter === 'all') return purchases;
+    
+    const now = new Date();
+    let filterDate;
+    
+    switch (timeFilter) {
+      case 'day':
+        filterDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case 'week':
+        filterDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'month':
+        filterDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case '90days':
+        filterDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      case 'year':
+        filterDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      default:
+        return purchases;
+    }
+    
+    return purchases.filter(purchase => new Date(purchase.purchaseDate || purchase.createdAt) >= filterDate);
+  };
+
+  // Handle filter change
+  const handleFilterChange = (newFilter) => {
+    setTimeFilter(newFilter);
+    console.log(`Purchase filter changed to: ${newFilter}`);
+    // The filtered data will update automatically via getFilteredPurchases()
+  };
+
+  // Handle refresh button click
+  const handleRefresh = () => {
+    console.log('Refreshing purchases data...');
+    console.log('Current purchases count:', purchases.length);
+    console.log('Current stats:', purchaseStats);
+    fetchPurchases();
+  };
+
+  // Export purchases data
+  const handleExportPurchases = async (format = 'excel') => {
+    try {
+      console.log('Export format received:', format, typeof format);
+      const filteredData = getFilteredPurchases();
+      console.log('Filtered purchases data:', filteredData);
+      
+      const { exportPurchases } = await import('../utils/exportUtils');
+      const result = exportPurchases(filteredData, format);
+      console.log('Export result:', result);
+      return result;
+    } catch (error) {
+      console.error('Export error in handleExportPurchases:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Generate invoice for purchase
+  const handleGenerateInvoice = async (purchaseId) => {
+    try {
+      const response = await api.post(`/purchases/${purchaseId}/invoice`);
+      
+      if (response.data.success) {
+        toast.success('Invoice generated successfully!');
+        fetchPurchases(); // Refresh the list
+      }
+    } catch (error) {
+      console.error('Generate invoice error:', error);
+      toast.error(error.response?.data?.error || 'Failed to generate invoice');
+    }
+  };
+
+  // Mark payment as cleared
+  const handleMarkPaymentCleared = async (purchaseId) => {
+    try {
+      const response = await api.post(`/purchases/${purchaseId}/clear-payment`);
+      
+      if (response.data.success) {
+        toast.success('Payment cleared and stock updated successfully!');
+        fetchPurchases(); // Refresh the list
+      }
+    } catch (error) {
+      console.error('Mark payment cleared error:', error);
+      toast.error(error.response?.data?.error || 'Failed to clear payment');
+    }
+  };
+
+  // Download invoice/receipt
+  const handleDownloadDocument = async (purchaseId, type = 'invoice', format = 'pdf') => {
+    try {
+      const response = await api.get(`/purchases/${purchaseId}/download?type=${type}`);
+      
+      if (response.data.success) {
+        const result = await generateDocument(response.data.document, format, type);
+        
+        if (result.success) {
+          toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} downloaded successfully!`);
+        } else {
+          toast.error(result.error || `Failed to generate ${type}`);
+        }
+      }
+    } catch (error) {
+      console.error('Download document error:', error);
+      toast.error(error.response?.data?.error || `Failed to download ${type}`);
+    }
+  };
+
+  if (loading) {
+    return <CenteredLoader message="Loading purchases..." size="large" />;
+  }
+
+  const isNew = location.pathname === '/purchases/new';
+  if (isNew) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <PurchaseFormPage 
+          onSuccess={(newPurchase) => {
+            // Add the new purchase to state immediately
+            setPurchases(prev => [newPurchase, ...prev]);
+            
+            // Highlight the newly added purchase
+            setNewlyAddedPurchaseId(newPurchase._id);
+            
+            // Clear highlight after 3 seconds
+            setTimeout(() => setNewlyAddedPurchaseId(null), 3000);
+            
+            // Update stats immediately
+            setPurchaseStats(prev => ({
+              totalPurchases: prev.totalPurchases + 1,
+              totalItems: prev.totalItems + (newPurchase.items ? 
+                newPurchase.items.reduce((sum, item) => sum + item.quantity, 0) : 0),
+              totalValue: prev.totalValue + (newPurchase.totalAmount || 0)
+            }));
+            
+            navigate('/purchases');
+          }} 
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 sm:space-y-5 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Purchase Orders</h1>
+          <p className="text-sm sm:text-base text-gray-600 truncate">Manage your purchase orders and suppliers</p>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          <button 
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center px-3 py-1.5 sm:py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm whitespace-nowrap"
+            title="Refresh purchases from database"
+          >
+            <RefreshCw className={`h-4 w-4 mr-1 sm:mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+          <ExportButton
+            data={getFilteredPurchases()}
+            filename="purchases"
+            title="Purchase Report"
+            exportFunction={handleExportPurchases}
+            variant="default"
+            buttonText="Export"
+          />
+          <button 
+            className="btn-primary flex items-center whitespace-nowrap" 
+            onClick={() => {
+              console.log('New Purchase Order button clicked');
+              console.log('Current location:', location.pathname);
+              console.log('Navigating to: /purchases/new');
+              try {
+                navigate('/purchases/new');
+                console.log('Navigation command executed');
+              } catch (error) {
+                console.error('Navigation error:', error);
+              }
+            }}
+          >
+            <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">New Purchase Order</span>
+            <span className="sm:hidden">New</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card p-4 sm:p-5 md:p-6"
+        >
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 bg-blue-500 rounded-lg flex-shrink-0">
+              <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Total Purchases</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{purchaseStats.totalPurchases}</p>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card p-4 sm:p-5 md:p-6"
+        >
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 bg-green-500 rounded-lg flex-shrink-0">
+              <Package className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Items Purchased</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900">{purchaseStats.totalItems}</p>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="card p-4 sm:p-5 md:p-6"
+        >
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-3 bg-purple-500 rounded-lg flex-shrink-0">
+              <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-gray-600 truncate">Total Value</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate">PKR {purchaseStats.totalValue.toLocaleString()}</p>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Debug Info Panel - Remove this in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-blue-900 mb-2">Debug Information</h3>
+          <div className="text-xs text-blue-800 space-y-1">
+            <p>Total Purchases in State: {purchases.length}</p>
+            <p>Filtered Purchases: {getFilteredPurchases().length}</p>
+            <p>Current Filter: {timeFilter}</p>
+            <p>API Endpoint: /purchases?limit=1000</p>
+            <p>Last Refresh: {new Date().toLocaleTimeString()}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Purchase Records Section */}
+      <div className="card p-4 sm:p-5 md:p-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 gap-3">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+            Purchase Records ({getFilteredPurchases().length} of {purchases.length} total)
+          </h2>
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
+            <select
+              value={timeFilter}
+              onChange={(e) => handleFilterChange(e.target.value)}
+              className="border border-gray-300 rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+            >
+              <option value="all">All Time</option>
+              <option value="day">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="90days">Last 90 Days</option>
+              <option value="year">This Year</option>
+            </select>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-1.5 sm:p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Refresh purchases data"
+            >
+              <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {getFilteredPurchases().length === 0 ? (
+          <div className="text-center py-6 sm:py-8">
+            <Package className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400 mx-auto mb-3 sm:mb-4" />
+            <p className="text-gray-500 text-base sm:text-lg">No purchases found</p>
+            <p className="text-gray-400 text-xs sm:text-sm mt-2 px-4">
+              {timeFilter === 'all' ? 'Start by creating your first purchase order to see real data' : `No purchases found for the selected ${timeFilter} period`}
+            </p>
+            <button
+              onClick={() => {
+                console.log('Create Your First Purchase Order button clicked');
+                navigate('/purchases/new');
+              }}
+              className="btn-primary mt-4"
+            >
+              Create Your First Purchase Order
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3 sm:space-y-4">
+            {getFilteredPurchases().map((purchase) => (
+              <motion.div
+                key={purchase._id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`border rounded-lg p-3 sm:p-4 hover:shadow-md transition-all duration-300 ${
+                  newlyAddedPurchaseId === purchase._id 
+                    ? 'border-green-500 bg-green-50 shadow-lg ring-2 ring-green-200' 
+                    : 'border-gray-200'
+                }`}
+              >
+                <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-gray-900 text-sm sm:text-base">{purchase.purchaseNumber}</span>
+                        <span className={`px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                          purchase.status === 'received' ? 'bg-green-100 text-green-800' :
+                          purchase.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {purchase.status}
+                        </span>
+                        <span className={`px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                          purchase.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
+                          purchase.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                          purchase.paymentStatus === 'partial' ? 'bg-blue-100 text-blue-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {purchase.paymentStatus}
+                        </span>
+                      </div>
+                      
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        {/* Generate Invoice */}
+                        {!purchase.invoiceGenerated && (
+                          <button
+                            onClick={() => handleGenerateInvoice(purchase._id)}
+                            className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+                            title="Generate Invoice"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+                        )}
+                        
+                        {/* Download Invoice */}
+                        {purchase.invoiceGenerated && (
+                          <div className="flex items-center space-x-1">
+                            <button
+                              onClick={() => handleDownloadDocument(purchase._id, 'invoice', 'pdf')}
+                              className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+                              title="Download Invoice (PDF)"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </button>
+                            <span className="text-xs text-green-600 font-medium">INV</span>
+                          </div>
+                        )}
+                        
+                        {/* Clear Payment */}
+                        {purchase.paymentStatus !== 'paid' && (
+                          <button
+                            onClick={() => handleMarkPaymentCleared(purchase._id)}
+                            className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors duration-200"
+                            title="Mark Payment Cleared"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </button>
+                        )}
+                        
+                        {/* Download Receipt */}
+                        {purchase.receiptGenerated && (
+                          <div className="flex items-center space-x-1">
+                            <button
+                              onClick={() => handleDownloadDocument(purchase._id, 'receipt', 'pdf')}
+                              className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors duration-200"
+                              title="Download Receipt (PDF)"
+                            >
+                              <Receipt className="w-4 h-4" />
+                            </button>
+                            <span className="text-xs text-green-600 font-medium">REC</span>
+                          </div>
+                        )}
+                        
+                        {/* Payment Status Indicator */}
+                        {purchase.paymentStatus === 'paid' && !purchase.receiptGenerated && (
+                          <div className="flex items-center space-x-1 text-green-600">
+                            <CheckCircle className="w-4 h-4" />
+                            <span className="text-xs font-medium">PAID</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 text-xs sm:text-sm text-gray-600">
+                      <div className="flex items-center">
+                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+                        <span className="truncate">{new Date(purchase.purchaseDate || purchase.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center">
+                        <Package className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+                        <span>{purchase.items.length} items</span>
+                      </div>
+                      <div className="flex items-center">
+                        <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+                        <span className="font-medium truncate">PKR {purchase.totalAmount?.toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <div className="mt-2 sm:mt-3">
+                      <p className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">Items:</p>
+                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                        {purchase.items.slice(0, 3).map((item, index) => (
+                          <span
+                            key={index}
+                            className="px-2 py-0.5 sm:py-1 bg-blue-100 text-blue-800 rounded-full text-xs truncate max-w-[200px]"
+                            title={`${item.productId?.name || 'Unknown Product'} (x${item.quantity})`}
+                          >
+                            {item.productId?.name || 'Unknown Product'} (x{item.quantity})
+                          </span>
+                        ))}
+                        {purchase.items.length > 3 && (
+                          <span className="px-2 py-0.5 sm:py-1 bg-gray-100 text-gray-600 rounded-full text-xs whitespace-nowrap">
+                            +{purchase.items.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="lg:text-right border-t lg:border-t-0 lg:border-l border-gray-200 pt-2 lg:pt-0 lg:pl-3">
+                    <div className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">
+                      <span className="font-medium">Supplier:</span> {purchase.supplierId?.name || 'Unknown'}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {purchase.receivedDate ? `Received: ${new Date(purchase.receivedDate).toLocaleDateString()}` : 'Not received yet'}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Purchases;
