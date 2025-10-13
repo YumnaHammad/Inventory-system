@@ -106,6 +106,7 @@ const SalesFormPage = ({ onSuccess }) => {
       ...prev,
       items: [...prev.items, {
         productId: '',
+        variantId: '',
         quantity: 1,
         unitPrice: 0
       }]
@@ -119,12 +120,34 @@ const SalesFormPage = ({ onSuccess }) => {
     }));
   };
 
+  const getVariantPrice = (variantId, productId) => {
+    const product = products.find(p => p._id === productId);
+    if (!product || !product.variants) return 0;
+    
+    const variant = product.variants.find(v => (v._id || v.sku) === variantId);
+    return variant ? (variant.sellingPrice || 0) : 0;
+  };
+
+  const getProductVariants = (productId) => {
+    const product = products.find(p => p._id === productId);
+    return (product && product.hasVariants && product.variants) ? product.variants : [];
+  };
+
   const updateItem = async (index, field, value) => {
     const updatedItems = formData.items.map((item, i) => 
       i === index 
         ? { 
             ...item, 
             [field]: value,
+            // Reset variant and price when product changes
+            ...(field === 'productId' ? {
+              variantId: '',
+              unitPrice: 0
+            } : {}),
+            // Update unit price when variant is selected
+            ...(field === 'variantId' ? {
+              unitPrice: getVariantPrice(value, item.productId)
+            } : {}),
             ...(field === 'quantity' || field === 'unitPrice' ? {
               totalPrice: field === 'quantity' ? value * item.unitPrice : item.quantity * value
             } : {})
@@ -203,6 +226,15 @@ const SalesFormPage = ({ onSuccess }) => {
       if (!item.productId) {
         errors[`item_${index}_productId`] = 'Product is required';
       }
+      
+      // Check if product has variants
+      const product = products.find(p => p._id === item.productId);
+      if (product && product.hasVariants && product.variants && product.variants.length > 0) {
+        if (!item.variantId) {
+          errors[`item_${index}_variantId`] = 'Variant is required for this product';
+        }
+      }
+      
       if (!item.quantity || item.quantity <= 0) {
         errors[`item_${index}_quantity`] = 'Quantity must be greater than 0';
       }
@@ -540,6 +572,34 @@ const SalesFormPage = ({ onSuccess }) => {
                           </p>
                         )}
                       </div>
+
+                      {/* Variant Selection */}
+                      {item.productId && getProductVariants(item.productId).length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Variant *
+                          </label>
+                          <select
+                            value={item.variantId || ''}
+                            onChange={(e) => updateItem(index, 'variantId', e.target.value)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                              validationErrors[`item_${index}_variantId`] ? 'border-red-500' : 'border-gray-300'
+                            }`}
+                          >
+                            <option value="">Select Variant</option>
+                            {getProductVariants(item.productId).map(variant => (
+                              <option key={variant._id || variant.sku} value={variant._id || variant.sku}>
+                                {variant.name} - PKR {variant.sellingPrice}
+                              </option>
+                            ))}
+                          </select>
+                          {validationErrors[`item_${index}_variantId`] && (
+                            <p className="mt-1 text-sm text-red-600">
+                              {validationErrors[`item_${index}_variantId`]}
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">

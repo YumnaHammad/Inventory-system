@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import {
   Package,
   Plus,
@@ -33,9 +34,11 @@ const ProductList = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
-  const [sortBy, setSortBy] = useState('name');
+  const [sortBy, setSortBy] = useState('newest');
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, product: null });
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   useEffect(() => {
     fetchProducts();
@@ -45,7 +48,12 @@ const ProductList = () => {
     try {
       setLoading(true);
       const response = await api.get('/products');
-      setProducts(response.data.products || response.data);
+      const productsData = response.data.products || response.data;
+      // Sort by creation date - newest first
+      const sortedProducts = (productsData || []).sort((a, b) => {
+        return new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id);
+      });
+      setProducts(sortedProducts);
     } catch (err) {
       setError('Failed to fetch products');
       console.error('Error fetching products:', err);
@@ -87,12 +95,22 @@ const ProductList = () => {
   const handleDelete = async () => {
     if (!deleteModal.product) return;
     
+    const productName = deleteModal.product.name;
+    
     try {
+      const loadingToast = toast.loading(`Deleting ${productName}...`);
+      
       await api.delete(`/products/${deleteModal.product._id}`);
+      
       setProducts(products.filter(p => p._id !== deleteModal.product._id));
+      
+      toast.dismiss(loadingToast);
+      toast.success(`${productName} deleted successfully!`);
+      
       closeDeleteModal();
     } catch (err) {
       console.error('Error deleting product:', err);
+      toast.error(err.response?.data?.error || 'Failed to delete product. Please try again.');
     }
   };
 
@@ -111,12 +129,24 @@ const ProductList = () => {
 
   const sortedProducts = filteredProducts.sort((a, b) => {
     switch (sortBy) {
+      case 'newest': return new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id);
       case 'name': return a.name.localeCompare(b.name);
       case 'stock': return b.currentStock - a.currentStock;
       case 'price': return b.sellingPrice - a.sellingPrice;
       default: return 0;
     }
   });
+
+  // Pagination
+  const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentProducts = sortedProducts.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterCategory, sortBy]);
 
   const categories = [...new Set(products.map(p => p.category))];
 
@@ -125,6 +155,7 @@ const ProductList = () => {
   }
 
   return (
+ <>
     <div className="space-y-4 sm:space-y-5 md:space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
@@ -204,6 +235,7 @@ const ProductList = () => {
             onChange={(e) => setSortBy(e.target.value)}
             className="input-field"
           >
+            <option value="newest">Sort by Newest</option>
             <option value="name">Sort by Name</option>
             <option value="stock">Sort by Stock</option>
             <option value="price">Sort by Price</option>
@@ -222,7 +254,7 @@ const ProductList = () => {
       {viewMode === 'grid' ? (
         /* Grid View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedProducts.map((product) => {
+          {currentProducts.map((product) => {
             const totalStock = product.warehouses?.reduce((sum, w) => sum + w.stock, 0) || 0;
             const { text: stockText, color: stockColor, bgColor: stockBgColor } = getStockStatus(totalStock);
             
@@ -272,6 +304,41 @@ const ProductList = () => {
                     <span className="text-gray-600">Unit:</span>
                     <span className="font-medium">{product.unit}</span>
                   </div>
+                  
+                  {/* Show variants info or regular pricing */}
+                  {product.hasVariants && product.variants && product.variants.length > 0 ? (
+                    <div className="pt-2 pb-2 border-t border-gray-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-blue-600 flex items-center">
+                          <Grid3X3 className="h-4 w-4 mr-1" />
+                          {product.variants.length} Variants
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {product.variants.slice(0, 3).map((variant, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-xs bg-gradient-to-r from-blue-50 to-indigo-50 rounded px-2 py-1.5">
+                            <div className="flex items-center space-x-1 flex-1 min-w-0">
+                              <span className="font-medium text-gray-700 truncate">{variant.name}</span>
+                              {variant.stock > 0 ? (
+                                <span className="text-green-600 font-semibold">({variant.stock})</span>
+                              ) : (
+                                <span className="text-red-600 font-semibold">(0)</span>
+                              )}
+                            </div>
+                            <span className="text-gray-900 font-semibold ml-2 whitespace-nowrap">
+                              PKR {variant.sellingPrice}
+                            </span>
+                          </div>
+                        ))}
+                        {product.variants.length > 3 && (
+                          <div className="text-xs text-center text-blue-600 font-medium">
+                            +{product.variants.length - 3} more variants
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Cost Price:</span>
                     <span className="font-medium">PKR {product.costPrice}</span>
@@ -280,6 +347,9 @@ const ProductList = () => {
                     <span className="text-gray-600">Selling Price:</span>
                     <span className="font-medium">PKR {product.sellingPrice}</span>
                   </div>
+                    </>
+                  )}
+                  
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Stock:</span>
                     <div className={`px-2 py-1 rounded-full text-xs font-semibold ${stockBgColor} ${stockColor}`}>
@@ -319,10 +389,10 @@ const ProductList = () => {
                     Category
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cost Price
+                    Cost / Variants
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Selling Price
+                    Price / Variants
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Stock
@@ -336,7 +406,7 @@ const ProductList = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sortedProducts.map((product) => {
+                {currentProducts.map((product) => {
                   const totalStock = product.warehouses?.reduce((sum, w) => sum + w.stock, 0) || 0;
                   const { text: stockText, color: stockColor, bgColor: stockBgColor } = getStockStatus(totalStock);
                   
@@ -364,16 +434,37 @@ const ProductList = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
+                        {product.hasVariants && product.variants && product.variants.length > 0 ? (
+                          <div className="flex items-center">
+                            <Grid3X3 className="h-4 w-4 text-blue-600 mr-2" />
+                            <span className="text-sm font-semibold text-blue-600">{product.variants.length} Variants</span>
+                          </div>
+                        ) : (
                         <div className="flex items-center">
                           <DollarSign className="h-4 w-4 text-gray-400 mr-2" />
                           <span className="text-sm font-medium text-gray-900">PKR {product.costPrice}</span>
                         </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
+                        {product.hasVariants && product.variants && product.variants.length > 0 ? (
+                          <div className="text-xs space-y-0.5">
+                            {product.variants.slice(0, 2).map((variant, idx) => (
+                              <div key={idx} className="text-gray-700">
+                                <span className="font-medium">{variant.name}:</span>{' '}
+                                <span className="text-gray-900 font-semibold">PKR {variant.sellingPrice}</span>
+                              </div>
+                            ))}
+                            {product.variants.length > 2 && (
+                              <div className="text-blue-600 font-medium">+{product.variants.length - 2} more</div>
+                            )}
+                          </div>
+                        ) : (
                         <div className="flex items-center">
                           <DollarSign className="h-4 w-4 text-gray-400 mr-2" />
                           <span className="text-sm font-medium text-gray-900">PKR {product.sellingPrice}</span>
                         </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -430,18 +521,96 @@ const ProductList = () => {
         </div>
       )}
 
-      {/* Product Detail Modal */}
-      {selectedProduct && (
-        <ProductDetail
-          productId={selectedProduct._id}
-          onClose={() => setSelectedProduct(null)}
-        />
+      {/* Pagination */}
+      {sortedProducts.length > 0 && totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-lg">
+          {/* Mobile pagination */}
+          <div className="flex flex-1 justify-between sm:hidden">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+
+          {/* Desktop pagination */}
+          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{' '}
+                <span className="font-medium">{Math.min(indexOfLastItem, sortedProducts.length)}</span> of{' '}
+                <span className="font-medium">{sortedProducts.length}</span> results
+              </p>
+            </div>
+            <div>
+              <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="sr-only">Previous</span>
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                  </svg>
+                </button>
+
+                {[...Array(totalPages)].map((_, index) => {
+                  const pageNumber = index + 1;
+                  // Show first page, last page, current page, and pages around current
+                  if (
+                    pageNumber === 1 ||
+                    pageNumber === totalPages ||
+                    (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                  ) {
+                    return (
+                      <button
+                        key={pageNumber}
+                        onClick={() => setCurrentPage(pageNumber)}
+                        className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                          currentPage === pageNumber
+                            ? 'z-10 bg-blue-600 text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+                            : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
+                        }`}
+                      >
+                        {pageNumber}
+                      </button>
+                    );
+                  } else if (pageNumber === currentPage - 2 || pageNumber === currentPage + 2) {
+                    return <span key={pageNumber} className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300">...</span>;
+                  }
+                  return null;
+                })}
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className="sr-only">Next</span>
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </nav>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {deleteModal.isOpen && (
-          <div className="fixed inset-0 z-[9999] overflow-y-auto">
+          <div className="fixed inset-0 overflow-y-auto" style={{ zIndex: 99999 }}>
             <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
               {/* Background overlay */}
               <motion.div
@@ -450,7 +619,7 @@ const ProductList = () => {
                 exit={{ opacity: 0 }}
                 className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
                 onClick={closeDeleteModal}
-                style={{ zIndex: 9998 }}
+                style={{ zIndex: 99998 }}
               />
 
               {/* Modal */}
@@ -459,6 +628,7 @@ const ProductList = () => {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
                 className="inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl"
+                style={{ position: 'relative', zIndex: 99999 }}
               >
                 <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
                   <AlertCircle className="w-6 h-6 text-red-600" />
@@ -517,6 +687,17 @@ const ProductList = () => {
         )}
       </AnimatePresence>
     </div>
+    <div>
+    {/* Product Detail Modal */}
+    {selectedProduct && (
+        <ProductDetail
+          productId={selectedProduct._id}
+          onClose={() => setSelectedProduct(null)}
+        />
+      )}
+
+    </div>
+ </>
   );
 };
 

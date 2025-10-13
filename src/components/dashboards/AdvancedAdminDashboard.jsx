@@ -608,13 +608,36 @@ const AdvancedAdminDashboard = () => {
               >
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={chartData.salesTrend}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={2} />
-                    <Line type="monotone" dataKey="profit" stroke="#10B981" strokeWidth={2} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis dataKey="date" stroke="#6B7280" style={{ fontSize: '12px' }} />
+                    <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#fff', 
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }} 
+                    />
+                    <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="revenue" 
+                      stroke="#6366F1" 
+                      strokeWidth={3} 
+                      dot={{ fill: '#6366F1', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6 }}
+                      name="Revenue"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="profit" 
+                      stroke="#10B981" 
+                      strokeWidth={3}
+                      dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+                      activeDot={{ r: 6 }}
+                      name="Profit"
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </ChartCard>
@@ -633,18 +656,63 @@ const AdvancedAdminDashboard = () => {
                         { name: 'Out of Stock', value: dashboardData.inventoryMetrics.outOfStockProducts }
                       ]}
                       cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      cy="45%"
+                      labelLine={true}
+                      label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                        if (percent < 0.02) return null; // Don't show label if less than 2%
+                        const RADIAN = Math.PI / 180;
+                        const radius = outerRadius + 30;
+                        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                        return (
+                          <text 
+                            x={x} 
+                            y={y} 
+                            fill="#374151" 
+                            textAnchor={x > cx ? 'start' : 'end'} 
+                            dominantBaseline="central"
+                            style={{ fontSize: '13px', fontWeight: '500' }}
+                          >
+                            {`${(percent * 100).toFixed(1)}%`}
+                          </text>
+                        );
+                      }}
                       outerRadius={80}
+                      innerRadius={0}
                       fill="#8884d8"
                       dataKey="value"
+                      paddingAngle={3}
                     >
-                      {[].map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={['#10B981', '#F59E0B', '#EF4444'][index]} />
+                      {[
+                        { name: 'In Stock', value: 1 },
+                        { name: 'Low Stock', value: 1 },
+                        { name: 'Out of Stock', value: 1 }
+                      ].map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={['#10B981', '#F59E0B', '#EF4444'][index]}
+                          stroke="#fff"
+                          strokeWidth={3}
+                        />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Legend 
+                      verticalAlign="bottom" 
+                      height={36}
+                      iconType="circle"
+                      wrapperStyle={{ 
+                        paddingTop: '15px',
+                        fontSize: '13px'
+                      }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#fff', 
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
                   </RechartsPieChart>
                 </ResponsiveContainer>
               </ChartCard>
@@ -656,14 +724,42 @@ const AdvancedAdminDashboard = () => {
               onClick={() => window.location.href = '/warehouses'}
             >
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData.warehousePerformance}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="utilization" fill="#3B82F6" />
-                  <Bar dataKey="efficiency" fill="#10B981" />
+                <BarChart data={chartData.warehousePerformance} barGap={8}>
+                  <defs>
+                    <linearGradient id="colorUtilization" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.9}/>
+                      <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.7}/>
+                    </linearGradient>
+                    <linearGradient id="colorEfficiency" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#14B8A6" stopOpacity={0.9}/>
+                      <stop offset="95%" stopColor="#14B8A6" stopOpacity={0.7}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis dataKey="name" stroke="#6B7280" style={{ fontSize: '12px' }} />
+                  <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#fff', 
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                    cursor={{ fill: 'rgba(107, 114, 128, 0.1)' }}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                  <Bar 
+                    dataKey="utilization" 
+                    fill="url(#colorUtilization)"
+                    radius={[6, 6, 0, 0]}
+                    name="Utilization %"
+                  />
+                  <Bar 
+                    dataKey="efficiency" 
+                    fill="url(#colorEfficiency)"
+                    radius={[6, 6, 0, 0]}
+                    name="Efficiency %"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
@@ -743,13 +839,30 @@ const AdvancedAdminDashboard = () => {
               <ChartCard title="Financial Performance">
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={chartData.financialMetrics}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Area type="monotone" dataKey="revenue" stackId="1" stroke="#3B82F6" fill="#3B82F6" />
-                    <Area type="monotone" dataKey="profit" stackId="1" stroke="#10B981" fill="#10B981" />
+                    <defs>
+                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#6366F1" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#6366F1" stopOpacity={0.1}/>
+                      </linearGradient>
+                      <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis dataKey="month" stroke="#6B7280" style={{ fontSize: '12px' }} />
+                    <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#fff', 
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                    <Area type="monotone" dataKey="revenue" stackId="1" stroke="#6366F1" fill="url(#colorRevenue)" strokeWidth={2} name="Revenue" />
+                    <Area type="monotone" dataKey="profit" stackId="1" stroke="#10B981" fill="url(#colorProfit)" strokeWidth={2} name="Profit" />
                   </AreaChart>
                 </ResponsiveContainer>
               </ChartCard>
@@ -757,14 +870,42 @@ const AdvancedAdminDashboard = () => {
               <ChartCard title="User Activity">
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={chartData.userActivity}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="activeUsers" stroke="#3B82F6" strokeWidth={2} />
-                    <Line type="monotone" dataKey="newUsers" stroke="#10B981" strokeWidth={2} />
-                    <Line type="monotone" dataKey="orders" stroke="#F59E0B" strokeWidth={2} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis dataKey="date" stroke="#6B7280" style={{ fontSize: '12px' }} />
+                    <YAxis stroke="#6B7280" style={{ fontSize: '12px' }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#fff', 
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="activeUsers" 
+                      stroke="#6366F1" 
+                      strokeWidth={3}
+                      dot={{ fill: '#6366F1', strokeWidth: 2, r: 3 }}
+                      name="Active Users"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="newUsers" 
+                      stroke="#10B981" 
+                      strokeWidth={3}
+                      dot={{ fill: '#10B981', strokeWidth: 2, r: 3 }}
+                      name="New Users"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="orders" 
+                      stroke="#F59E0B" 
+                      strokeWidth={3}
+                      dot={{ fill: '#F59E0B', strokeWidth: 2, r: 3 }}
+                      name="Orders"
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </ChartCard>

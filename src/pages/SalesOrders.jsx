@@ -42,7 +42,11 @@ const SalesOrders = () => {
   const fetchOrders = async () => {
     try {
       const response = await axios.get('/api/sales-orders');
-      setOrders(response.data);
+      // Sort by creation date - newest first
+      const sortedOrders = (response.data || []).sort((a, b) => {
+        return new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id);
+      });
+      setOrders(sortedOrders);
     } catch (error) {
       console.error('Error fetching sales orders:', error);
       toast.error('Failed to fetch sales orders');

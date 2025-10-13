@@ -51,7 +51,7 @@ const AlertDialog = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="fixed inset-0 alert-dialog overflow-y-auto" style={{ zIndex: 9999 }}>
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}

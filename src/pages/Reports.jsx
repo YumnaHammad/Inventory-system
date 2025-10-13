@@ -490,7 +490,7 @@ const Reports = () => {
             <div className="flex items-center justify-between">
             <div>
                 <p className="text-sm font-medium text-gray-600">Total Amount</p>
-                <p className="text-2xl font-bold text-gray-900">PKR {supplierPerformance.summary.totalAmount.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">PKR {(supplierPerformance.summary.totalAmount || 0).toLocaleString()}</p>
               </div>
               <DollarSign className="w-8 h-8 text-emerald-600" />
             </div>
@@ -522,18 +522,18 @@ const Reports = () => {
                         <p className="text-sm text-gray-600">{supplier.supplierCode}</p>
                       </div>
                     </td>
-                    <td className="py-3 px-4">{supplier.totalPurchases}</td>
-                    <td className="py-3 px-4">PKR {supplier.totalAmount.toLocaleString()}</td>
-                    <td className="py-3 px-4">PKR {supplier.averageOrderValue.toLocaleString()}</td>
+                    <td className="py-3 px-4">{supplier.totalPurchases || 0}</td>
+                    <td className="py-3 px-4">PKR {(supplier.totalAmount || 0).toLocaleString()}</td>
+                    <td className="py-3 px-4">PKR {(supplier.averageOrderValue || 0).toLocaleString()}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center">
                         <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
                           <div 
                             className="bg-blue-600 h-2 rounded-full" 
-                            style={{ width: `${supplier.deliveryPerformance}%` }}
+                            style={{ width: `${supplier.deliveryPerformance || 0}%` }}
                           ></div>
                         </div>
-                        <span className="text-sm text-gray-600">{supplier.deliveryPerformance}%</span>
+                        <span className="text-sm text-gray-600">{supplier.deliveryPerformance || 0}%</span>
                       </div>
                     </td>
                     <td className="py-3 px-4">
@@ -541,10 +541,10 @@ const Reports = () => {
                         <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
                           <div 
                             className="bg-green-600 h-2 rounded-full" 
-                            style={{ width: `${supplier.onTimePerformance}%` }}
+                            style={{ width: `${supplier.onTimePerformance || 0}%` }}
                           ></div>
                         </div>
-                        <span className="text-sm text-gray-600">{supplier.onTimePerformance}%</span>
+                        <span className="text-sm text-gray-600">{supplier.onTimePerformance || 0}%</span>
                       </div>
                     </td>
                     <td className="py-3 px-4">

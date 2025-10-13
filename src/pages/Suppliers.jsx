@@ -70,8 +70,12 @@ const Suppliers = () => {
       
       const suppliersData = Array.isArray(response.data?.suppliers) ? response.data.suppliers : [];
       console.log('Suppliers data:', suppliersData);
-      setSuppliers(suppliersData);
-      setFilteredSuppliers(suppliersData);
+      // Sort by creation date - newest first
+      const sortedSuppliers = suppliersData.sort((a, b) => {
+        return new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id);
+      });
+      setSuppliers(sortedSuppliers);
+      setFilteredSuppliers(sortedSuppliers);
       
       // Fetch supplier stats
       const statsResponse = await api.get('/suppliers/stats');
@@ -312,7 +316,7 @@ const Suppliers = () => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-5 md:space-y-6">
+    <div className="">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
         {/* Title Section - Full width on mobile */}

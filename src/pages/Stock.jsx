@@ -26,7 +26,11 @@ const Stock = () => {
   const fetchStock = async () => {
     try {
       const response = await axios.get('/api/stock');
-      setStock(response.data);
+      // Sort by creation date - newest first
+      const sortedStock = (response.data || []).sort((a, b) => {
+        return new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id);
+      });
+      setStock(sortedStock);
     } catch (error) {
       console.error('Error fetching stock:', error);
       toast.error('Failed to fetch stock');

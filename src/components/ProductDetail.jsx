@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import api from '../services/api';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, 
   Truck, 
@@ -25,10 +26,22 @@ const ProductDetail = ({ productId, onClose }) => {
     }
   }, [productId]);
 
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
   const fetchProductDetails = async () => {
     try {
       setLoading(true);
       const response = await api.get(`/products/${productId}`);
+      console.log('🔍 ProductDetail - Full API Response:', response.data);
+      console.log('🎨 Has Variants?:', response.data.hasVariants);
+      console.log('📦 Variants Array:', response.data.variants);
+      console.log('📊 Variants Length:', response.data.variants?.length);
       setProduct(response.data);
     } catch (error) {
       console.error('Error fetching product details:', error);
@@ -70,21 +83,50 @@ const ProductDetail = ({ productId, onClose }) => {
   };
 
   if (loading) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    return createPortal(
+      <div 
+        className="fixed bg-black bg-opacity-50 flex items-center justify-center regular-modal" 
+        style={{ 
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          zIndex: 9500,
+          margin: 0,
+          padding: 0
+        }}
+      >
         <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
           <div className="flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
             <span className="ml-2 text-gray-600">Loading product details...</span>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
   if (error) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    return createPortal(
+      <div 
+        className="fixed bg-black bg-opacity-50 flex items-center justify-center regular-modal" 
+        style={{ 
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          zIndex: 9500,
+          margin: 0,
+          padding: 0
+        }}
+      >
         <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
           <div className="text-center">
             <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -98,17 +140,53 @@ const ProductDetail = ({ productId, onClose }) => {
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
   if (!product) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+  const modalContent = (
+    <div 
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        minHeight: '100vh',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        zIndex: 9500,
+        margin: 0,
+        padding: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'auto'
+      }}
+      onClick={onClose}
+    >
+
+      <div 
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          maxWidth: '1024px',
+          width: '90%',
+          maxHeight: '90vh',
+          overflow: 'auto',
+          position: 'relative',
+          margin: '16px',
+          padding: 0
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
+        <div style={{ padding: '24px', borderBottom: '1px solid #e5e7eb', backgroundColor: '#ffffff' }}>
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">{product.name}</h2>
@@ -116,7 +194,7 @@ const ProductDetail = ({ productId, onClose }) => {
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-2 transition-all"
             >
               <X className="h-6 w-6" />
             </button>
@@ -124,7 +202,7 @@ const ProductDetail = ({ productId, onClose }) => {
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
+        <div style={{ overflowY: 'auto', maxHeight: 'calc(90vh - 120px)', backgroundColor: '#ffffff' }}>
           <div className="p-6 space-y-6">
             {/* Product Info */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -139,14 +217,18 @@ const ProductDetail = ({ productId, onClose }) => {
                     <span className="text-gray-600">Unit:</span>
                     <span className="font-medium">{product.unit}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Cost Price:</span>
-                    <span className="font-medium">PKR {product.costPrice}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Selling Price:</span>
-                    <span className="font-medium">PKR {product.sellingPrice}</span>
-                  </div>
+                  {!product.hasVariants && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Cost Price:</span>
+                        <span className="font-medium">PKR {product.costPrice}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Selling Price:</span>
+                        <span className="font-medium">PKR {product.sellingPrice}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -189,6 +271,88 @@ const ProductDetail = ({ productId, onClose }) => {
                 </div>
               </div>
             </div>
+
+            {/* Debug Info */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-2">
+              <h3 className="text-sm font-semibold text-yellow-900">🔍 Debug Info:</h3>
+              <div className="text-xs text-yellow-800 space-y-1">
+                <p>hasVariants: <strong>{product.hasVariants ? 'TRUE ✅' : 'FALSE ❌'}</strong></p>
+                <p>variants exists: <strong>{product.variants ? 'YES ✅' : 'NO ❌'}</strong></p>
+                <p>variants length: <strong>{product.variants?.length || 0}</strong></p>
+                {product.variants && product.variants.length > 0 && (
+                  <p>First variant: <strong>{product.variants[0]?.name || 'N/A'}</strong></p>
+                )}
+              </div>
+            </div>
+
+            {/* Variants */}
+            {product.hasVariants && product.variants && product.variants.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Product Variants ({product.variants.length})</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {product.variants.map((variant, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h4 className="font-semibold text-gray-900">{variant.name}</h4>
+                          <p className="text-xs text-gray-600 mt-1">SKU: {variant.sku}</p>
+                        </div>
+                        {variant.stock > 0 ? (
+                          <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                            In Stock
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">
+                            Out of Stock
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {/* Attributes */}
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {variant.attributes.map((attr, attrIndex) => (
+                            <span 
+                              key={attrIndex}
+                              className="inline-flex items-center px-2 py-1 bg-white border border-blue-200 rounded text-xs"
+                            >
+                              <span className="font-medium text-gray-700">{attr.name}:</span>
+                              <span className="ml-1 text-blue-600">{attr.value}</span>
+                            </span>
+                          ))}
+                        </div>
+
+                        {/* Prices */}
+                        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-blue-200">
+                          <div>
+                            <p className="text-xs text-gray-600">Cost Price</p>
+                            <p className="font-semibold text-gray-900">PKR {variant.costPrice}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-600">Selling Price</p>
+                            <p className="font-semibold text-green-600">PKR {variant.sellingPrice}</p>
+                          </div>
+                        </div>
+
+                        {/* Stock */}
+                        <div className="pt-2 border-t border-blue-200">
+                          <div className="flex justify-between items-center">
+                            <p className="text-xs text-gray-600">Stock</p>
+                            <p className="font-semibold text-gray-900">{variant.stock} units</p>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Timeline */}
             {product.timeline && product.timeline.length > 0 && (
@@ -241,6 +405,8 @@ const ProductDetail = ({ productId, onClose }) => {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default ProductDetail;

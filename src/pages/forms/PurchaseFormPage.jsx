@@ -67,6 +67,7 @@ const PurchaseFormPage = ({ onSuccess }) => {
       ...prev,
       items: [...prev.items, {
         productId: '',
+        variantId: '',
         quantity: 1,
         unitPrice: 0
       }]
@@ -88,6 +89,15 @@ const PurchaseFormPage = ({ onSuccess }) => {
           ? { 
               ...item, 
               [field]: value,
+              // Reset variant and price when product changes
+              ...(field === 'productId' ? {
+                variantId: '',
+                unitPrice: 0
+              } : {}),
+              // Update unit price when variant is selected
+              ...(field === 'variantId' ? {
+                unitPrice: getVariantPrice(value, item.productId)
+              } : {}),
               ...(field === 'quantity' || field === 'unitPrice' ? {
                 totalPrice: field === 'quantity' ? value * item.unitPrice : item.quantity * value
               } : {})
@@ -95,6 +105,20 @@ const PurchaseFormPage = ({ onSuccess }) => {
           : item
       )
     }));
+  };
+
+  const getVariantPrice = (variantId, productId) => {
+    const product = products.find(p => p._id === productId);
+    if (product && product.variants) {
+      const variant = product.variants.find(v => v._id === variantId);
+      return variant ? variant.costPrice || variant.sellingPrice : 0;
+    }
+    return 0;
+  };
+
+  const getProductVariants = (productId) => {
+    const product = products.find(p => p._id === productId);
+    return product && product.hasVariants && product.variants ? product.variants : [];
   };
 
   const validateForm = () => {
@@ -362,31 +386,65 @@ const PurchaseFormPage = ({ onSuccess }) => {
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Product *
-                        </label>
-                        <select
-                          value={item.productId}
-                          onChange={(e) => updateItem(index, 'productId', e.target.value)}
-                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                            validationErrors[`item_${index}_productId`] ? 'border-red-500' : 'border-gray-300'
-                          }`}
-                        >
-                          <option value="">Select Product</option>
-                          {products.map(product => (
-                            <option key={product._id} value={product._id}>
-                              {product.name} ({product.sku})
-                            </option>
-                          ))}
-                        </select>
-                        {validationErrors[`item_${index}_productId`] && (
-                          <p className="mt-1 text-sm text-red-600">
-                            {validationErrors[`item_${index}_productId`]}
-                          </p>
-                )}
-              </div>
+                    <div className="grid grid-cols-1 gap-4">
+                      {/* Product Selection */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Product *
+                          </label>
+                          <select
+                            value={item.productId}
+                            onChange={(e) => updateItem(index, 'productId', e.target.value)}
+                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                              validationErrors[`item_${index}_productId`] ? 'border-red-500' : 'border-gray-300'
+                            }`}
+                          >
+                            <option value="">Select Product</option>
+                            {products.map(product => (
+                              <option key={product._id} value={product._id}>
+                                {product.name} ({product.sku})
+                              </option>
+                            ))}
+                          </select>
+                          {validationErrors[`item_${index}_productId`] && (
+                            <p className="mt-1 text-sm text-red-600">
+                              {validationErrors[`item_${index}_productId`]}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Variant Selection - Only show if product has variants */}
+                        {item.productId && getProductVariants(item.productId).length > 0 && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Variant *
+                            </label>
+                            <select
+                              value={item.variantId || ''}
+                              onChange={(e) => updateItem(index, 'variantId', e.target.value)}
+                              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                                validationErrors[`item_${index}_variantId`] ? 'border-red-500' : 'border-gray-300'
+                              }`}
+                            >
+                              <option value="">Select Variant</option>
+                              {getProductVariants(item.productId).map(variant => (
+                                <option key={variant._id || variant.sku} value={variant._id || variant.sku}>
+                                  {variant.name} - PKR {variant.costPrice || variant.sellingPrice}
+                                </option>
+                              ))}
+                            </select>
+                            {validationErrors[`item_${index}_variantId`] && (
+                              <p className="mt-1 text-sm text-red-600">
+                                {validationErrors[`item_${index}_variantId`]}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Quantity and Price */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -429,12 +487,13 @@ const PurchaseFormPage = ({ onSuccess }) => {
                         )}
         </div>
 
-        <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Total Price
-                        </label>
-                        <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg">
-                          ${(item.quantity * item.unitPrice).toFixed(2)}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Total Price
+                          </label>
+                          <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg">
+                            PKR {(item.quantity * item.unitPrice).toFixed(2)}
+                          </div>
                         </div>
                       </div>
                     </div>

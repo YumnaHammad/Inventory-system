@@ -15,7 +15,9 @@ import {
   XCircle,
   Clock,
   AlertCircle,
-  Loader2
+  Loader2,
+  Search,
+  X
 } from 'lucide-react';
 import CenteredLoader from '../components/CenteredLoader';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -41,14 +43,17 @@ const Warehouses = () => {
   const [warehousesKey, setWarehousesKey] = useState(0);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [warehouseToDeleteConfirm, setWarehouseToDeleteConfirm] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
   const { user, hasAnyRole } = useAuth();
 
   useEffect(() => {
-    fetchWarehouses();
+    if (location.pathname === '/warehouses') {
+      fetchWarehouses();
+    }
     fetchProducts();
-  }, []);
+  }, [location.pathname]);
 
   // Ensure products is always an array to prevent map errors
   useEffect(() => {
@@ -61,7 +66,11 @@ const Warehouses = () => {
   const fetchWarehouses = async () => {
     try {
       const response = await api.get('/warehouses');
-      setWarehouses(response.data || []);
+      // Sort by creation date - newest first
+      const sortedWarehouses = (response.data || []).sort((a, b) => {
+        return new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id);
+      });
+      setWarehouses(sortedWarehouses);
       console.log('Warehouses fetched:', response.data?.length || 0);
     } catch (error) {
       console.error('Error fetching warehouses:', error);
@@ -102,11 +111,25 @@ const Warehouses = () => {
     }
   };
 
-  const fetchWarehouseDetails = async (warehouseId) => {
+  const fetchWarehouseDetails = async (warehouseId, openAddStock = false) => {
     try {
       const response = await api.get(`/warehouses/${warehouseId}`);
       console.log('Warehouse details fetched:', response.data);
       setSelectedWarehouse(response.data);
+      
+      // Ensure products are loaded
+      if (!products || products.length === 0) {
+        console.log('Products not loaded, fetching...');
+        await fetchProducts();
+      }
+      
+      // Automatically open Add Stock modal if requested
+      if (openAddStock) {
+        setTimeout(() => {
+          console.log('Opening Add Stock modal automatically');
+          setShowAddStock(true);
+        }, 100);
+      }
     } catch (error) {
       console.error('Error fetching warehouse details:', error);
       toast.error('Failed to load warehouse details');
@@ -114,8 +137,28 @@ const Warehouses = () => {
   };
 
   const handleAddStock = async () => {
+    // Validation
     if (!selectedWarehouse || !newStock.productId || !newStock.quantity) {
       toast.error('Please select a product and enter quantity');
+      return;
+    }
+
+    // Get product name for confirmation
+    const selectedProduct = products.find(p => p._id === newStock.productId);
+    const productName = selectedProduct?.name || 'Unknown Product';
+    const quantity = parseInt(newStock.quantity);
+
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to add stock?\n\n` +
+      `Warehouse: ${selectedWarehouse.name}\n` +
+      `Product: ${productName}\n` +
+      `Quantity: ${quantity} units\n` +
+      `Tags: ${newStock.tags.length > 0 ? newStock.tags.join(', ') : 'None'}`
+    );
+
+    if (!confirmed) {
+      console.log('❌ Add stock cancelled by user');
       return;
     }
 
@@ -123,11 +166,11 @@ const Warehouses = () => {
     try {
       const response = await api.post(`/warehouses/${selectedWarehouse._id}/add-stock`, {
         productId: newStock.productId,
-        quantity: parseInt(newStock.quantity),
+        quantity: quantity,
         tags: newStock.tags
       });
       
-      console.log('Add stock response:', response.data);
+      console.log('✅ Add stock response:', response.data);
       toast.success(`Stock added successfully: ${response.data.addedStock.product} (${response.data.addedStock.quantity} units)`);
       
       setShowAddStock(false);
@@ -137,7 +180,7 @@ const Warehouses = () => {
       await fetchWarehouseDetails(selectedWarehouse._id);
       await fetchWarehouses();
     } catch (error) {
-      console.error('Error adding stock:', error);
+      console.error('❌ Error adding stock:', error);
       toast.error(error.response?.data?.error || 'Failed to add stock');
     } finally {
       setAddingStock(false);
@@ -259,7 +302,10 @@ const Warehouses = () => {
             Back to Warehouses
           </button>
         </div>
-        <WarehouseFormPage onSuccess={() => navigate('/warehouses')} />
+        <WarehouseFormPage onSuccess={async () => {
+          await fetchWarehouses(); // Refresh the list
+          navigate('/warehouses');
+        }} />
       </div>
     );
   }
@@ -284,7 +330,7 @@ const Warehouses = () => {
           </div>
           <div className="flex space-x-3">
             <button 
-              onClick={() => setShowAddStock(true)}
+              onClick={() => navigate(`/warehouses/${selectedWarehouse._id}/add-stock`)}
               className="btn-primary flex items-center"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -343,10 +389,20 @@ const Warehouses = () => {
             className="card p-6"
           >
             <div className="flex items-center">
-              <AlertTriangle className="h-8 w-8 text-orange-600 mr-3" />
+              <AlertTriangle className={`h-8 w-8 mr-3 ${
+                (selectedWarehouse.availableCapacity || 0) >= 0 
+                  ? 'text-green-600' 
+                  : 'text-red-600'
+              }`} />
               <div>
                 <p className="text-sm text-gray-600">Available Space</p>
-                <p className="text-2xl font-bold text-gray-900">{selectedWarehouse.availableCapacity || 0}</p>
+                <p className={`text-2xl font-bold ${
+                  (selectedWarehouse.availableCapacity || 0) >= 0 
+                    ? 'text-green-600' 
+                    : 'text-red-600'
+                }`}>
+                  {selectedWarehouse.availableCapacity || 0}
+                </p>
               </div>
             </div>
           </motion.div>
@@ -363,7 +419,7 @@ const Warehouses = () => {
           <div className="w-full bg-gray-200 rounded-full h-3">
             <div 
               className={`h-3 rounded-full transition-all duration-300 ${getCapacityBgColor(selectedWarehouse.capacityUsage || 0)}`}
-              style={{ width: `${selectedWarehouse.capacityUsage || 0}%` }}
+              style={{ width: `${Math.min(selectedWarehouse.capacityUsage || 0, 100)}%` }}
             ></div>
           </div>
           <div className="flex justify-between text-sm text-gray-600 mt-2">
@@ -453,7 +509,7 @@ const Warehouses = () => {
               <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">No products in stock</p>
               <button 
-                onClick={() => setShowAddStock(true)}
+                onClick={() => navigate(`/warehouses/${selectedWarehouse._id}/add-stock`)}
                 className="mt-4 btn-primary flex items-center mx-auto"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -465,7 +521,10 @@ const Warehouses = () => {
 
         {/* Add Stock Modal */}
         <AnimatePresence>
-          {showAddStock && createPortal(
+          {(() => {
+            console.log('Rendering Add Stock Modal - showAddStock:', showAddStock);
+            return showAddStock;
+          })() && createPortal(
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -708,7 +767,7 @@ const Warehouses = () => {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-5 md:space-y-6">
+    <div className="">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
         {/* Title Section - Full width on mobile */}
         <div className="w-full sm:w-auto">
@@ -743,8 +802,45 @@ const Warehouses = () => {
         </div>
       </div>
 
+      {/* Search Filter */}
+      <div className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search product name to find which warehouse it's in..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
+        </div>
+        {searchQuery && (
+          <p className="mt-2 text-sm text-gray-600">
+            Showing warehouses that contain products matching "{searchQuery}"
+          </p>
+        )}
+      </div>
+
       <div key={warehousesKey} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {warehouses.map((warehouse, index) => (
+        {warehouses
+          .filter(warehouse => {
+            if (!searchQuery.trim()) return true;
+            
+            // Filter warehouses that have products matching the search query
+            return warehouse.currentStock?.some(stockItem => {
+              const product = products.find(p => p._id === stockItem.productId?._id || p._id === stockItem.productId);
+              return product?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+            });
+          })
+          .map((warehouse, index) => (
         <motion.div
             key={warehouse._id}
           initial={{ opacity: 0, y: 20 }}
@@ -755,8 +851,16 @@ const Warehouses = () => {
         >
           <div className="flex items-center mb-4">
             <Warehouse className="h-8 w-8 text-primary-600 mr-3" />
-            <div>
-                <h3 className="font-semibold text-gray-900">{warehouse.name}</h3>
+            <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-gray-900">{warehouse.name}</h3>
+                  {(warehouse.capacityUsage || 0) > 100 && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      Overflow
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-500">{warehouse.location}</p>
               </div>
             </div>
@@ -772,7 +876,11 @@ const Warehouses = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Available Space:</span>
-                <span className="font-medium text-green-600">
+                <span className={`font-medium ${
+                  (warehouse.capacity || 0) - (warehouse.totalStock || 0) >= 0 
+                    ? 'text-green-600' 
+                    : 'text-red-600'
+                }`}>
                   {(warehouse.capacity || 0) - (warehouse.totalStock || 0)} items
                 </span>
               </div>
@@ -792,15 +900,21 @@ const Warehouses = () => {
             <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
               <div 
                 className={`h-2 rounded-full transition-all duration-300 ${getCapacityBgColor(warehouse.capacityUsage || 0)}`}
-                style={{ width: `${warehouse.capacityUsage || 0}%` }}
+                style={{ width: `${Math.min(warehouse.capacityUsage || 0, 100)}%` }}
               ></div>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500 flex items-center">
-                <Eye className="h-4 w-4 mr-1" />
-                Click to view details
-              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fetchWarehouseDetails(warehouse._id, true);
+                }}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+              >
+                <Package className="h-4 w-4 mr-1" />
+                Add Stock
+              </button>
               <div className="flex space-x-2">
                 <button 
                   onClick={(e) => {

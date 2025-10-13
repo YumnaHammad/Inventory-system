@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Bell, Search, Menu, ChevronDown } from 'lucide-react';
+import { Bell, Search, Menu, ChevronDown, X } from 'lucide-react';
 
 const Header = ({ onMobileMenuClick }) => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
 
   return (
     <div className="sticky top-0 z-40 flex h-14 sm:h-16 shrink-0 items-center gap-x-2 sm:gap-x-4 border-b border-gray-200 bg-white px-3 sm:px-4 shadow-sm lg:px-6 xl:px-8">
@@ -23,28 +27,52 @@ const Header = ({ onMobileMenuClick }) => {
 
       <div className="flex flex-1 gap-x-2 sm:gap-x-4 self-stretch lg:gap-x-6 items-center">
         {/* Search - Hidden on very small mobile, visible on larger screens */}
-        <form className="relative hidden sm:flex flex-1 max-w-md lg:max-w-lg" action="#" method="GET">
+        <form 
+          className="relative hidden sm:flex flex-1 max-w-md lg:max-w-lg" 
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (searchQuery.trim()) {
+              navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+            }
+          }}
+        >
           <label htmlFor="search-field" className="sr-only">
             Search
           </label>
-          <Search className="pointer-events-none absolute inset-y-0 left-0 h-full w-5 pl-3 text-gray-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
             id="search-field"
-            className="block h-full w-full border-0 py-0 pl-10 pr-3 text-gray-900 placeholder:text-gray-400 focus:ring-0 text-sm bg-gray-50 rounded-lg"
-            placeholder="Search..."
+            className="block h-10 w-full border border-gray-200 py-2 pl-10 pr-10 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white rounded-lg transition-all"
+            placeholder="Search products, suppliers, warehouses..."
             type="search"
             name="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </form>
         
         <div className="flex items-center gap-x-2 sm:gap-x-3 lg:gap-x-4 ml-auto">
           {/* Mobile Search Icon - Only on very small screens */}
           <button
             type="button"
+            onClick={() => setShowMobileSearch(!showMobileSearch)}
             className="sm:hidden -m-2 p-2 text-gray-400 hover:text-gray-500 rounded-lg hover:bg-gray-100"
           >
             <span className="sr-only">Search</span>
-            <Search className="h-5 w-5" aria-hidden="true" />
+            {showMobileSearch ? (
+              <X className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Search className="h-5 w-5" aria-hidden="true" />
+            )}
           </button>
 
           {/* Notifications */}
@@ -122,6 +150,41 @@ const Header = ({ onMobileMenuClick }) => {
           </div>
         </div>
       </div>
+
+      {/* Mobile Search Dropdown */}
+      {showMobileSearch && (
+        <div className="absolute top-14 left-0 right-0 bg-white border-b border-gray-200 shadow-lg p-3 sm:hidden z-50 animate-fade-in">
+          <form 
+            className="relative w-full"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (searchQuery.trim()) {
+                navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+                setShowMobileSearch(false);
+              }
+            }}
+          >
+            <Search className="pointer-events-none absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              className="block h-10 w-full border border-gray-200 py-2 pl-10 pr-10 text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white rounded-lg"
+              placeholder="Search products, suppliers, warehouses..."
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </form>
+        </div>
+      )}
     </div>
   );
 };

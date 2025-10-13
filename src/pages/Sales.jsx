@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Truck, Plus, TrendingUp, DollarSign, Calendar, Clock, Filter, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
+import { Truck, Plus, TrendingUp, DollarSign, Calendar, Clock, Filter, RefreshCw, CheckCircle, XCircle, Download, Package, RotateCcw, ArrowRight } from 'lucide-react';
 import CenteredLoader from '../components/CenteredLoader';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SalesFormPage from './forms/SalesFormPage';
 import api from '../services/api';
 import ExportButton from '../components/ExportButton';
+import toast from 'react-hot-toast';
 
 const Sales = () => {
   const [loading, setLoading] = useState(true);
@@ -41,15 +42,22 @@ const Sales = () => {
         localStorage.removeItem('tempSales');
       }
       
+      // Sort by creation date - newest first
+      const sortedSales = salesData.sort((a, b) => {
+        return new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id);
+      });
+      
       // Always use real data from API, even if empty
-      setSales(salesData);
+      setSales(sortedSales);
       
       // Calculate stats from real data (will be 0 if no sales)
       const stats = {
         totalSales: salesData.length,
         totalDelivered: salesData.filter(sale => sale.status === 'delivered').length,
-        totalReturns: salesData.filter(sale => sale.status === 'returned').length,
-        totalRevenue: salesData.reduce((sum, sale) => sum + (sale.totalAmount || 0), 0)
+        totalReturns: salesData.filter(sale => sale.status === 'returned' || sale.status === 'return').length,
+        totalRevenue: salesData
+          .filter(sale => sale.status !== 'returned' && sale.status !== 'return' && sale.status !== 'cancelled')
+          .reduce((sum, sale) => sum + (sale.totalAmount || 0), 0)
       };
       
       setSalesStats(stats);
@@ -68,8 +76,24 @@ const Sales = () => {
       
     } catch (error) {
       console.error('Error fetching sales:', error);
-      // Only use dummy data if API is completely unavailable
-      console.log('API unavailable, using dummy data for demonstration');
+      console.error('API Error Details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      // Show empty state instead of dummy data
+      setSales([]);
+      setSalesStats({
+        totalSales: 0,
+        totalDelivered: 0,
+        totalReturns: 0,
+        totalRevenue: 0
+      });
+      
+      toast.error('Failed to load sales orders. Please check your connection.');
+      
+      /* Removed dummy data - using real API data only
       const dummySales = [
         {
           _id: '1',
@@ -198,6 +222,7 @@ const Sales = () => {
       };
       
       setSalesStats(stats);
+      */  // End of dummy data comment
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -346,6 +371,192 @@ const Sales = () => {
   const handleExportSales = async (format = 'excel') => {
     const { exportSales } = await import('../utils/exportUtils');
     return exportSales(getFilteredSales(), format);
+  };
+
+  // Change sales status
+  const handleStatusChange = async (saleId, newStatus) => {
+    let loadingToast;
+    try {
+      console.log('Updating status:', { saleId, newStatus });
+      loadingToast = toast.loading(`Updating status to ${newStatus}...`);
+      
+      const response = await api.patch(`/sales/${saleId}/status`, { status: newStatus });
+      console.log('Status update response:', response.data);
+      
+      // Update local state
+      setSales(prevSales =>
+        prevSales.map(sale =>
+          sale._id === saleId ? { ...sale, status: newStatus } : sale
+        )
+      );
+      
+      toast.dismiss(loadingToast);
+      
+      // Show special message for returns
+      if (newStatus === 'return' || newStatus === 'returned') {
+        if (response.data.stockRestored) {
+          const warehouseName = response.data.warehouseName || 'the warehouse';
+          toast.success(`Order returned! Stock has been restored to ${warehouseName}.`, {
+            duration: 6000,
+            icon: '🔄'
+          });
+        } else {
+          toast.success(`Status updated to ${newStatus}!`);
+        }
+      } else {
+        toast.success(`Status updated to ${newStatus}!`);
+      }
+      
+    } catch (error) {
+      console.error('Error updating status:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        saleId,
+        newStatus
+      });
+      
+      if (loadingToast) {
+        toast.dismiss(loadingToast);
+      }
+      
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to update status';
+      toast.error(errorMessage);
+    }
+  };
+
+  // Generate and download delivery note
+  const handleDownloadDeliveryNote = async (sale) => {
+    let loadingToast;
+    try {
+      loadingToast = toast.loading('Generating delivery note...');
+      
+      // Import jsPDF
+      const jsPDF = (await import('jspdf')).default;
+      
+      // Import autoTable plugin - this extends jsPDF prototype
+      await import('jspdf-autotable');
+      
+      const doc = new jsPDF();
+      
+      // Verify autoTable is available
+      if (typeof doc.autoTable !== 'function') {
+        console.error('autoTable not available on jsPDF instance');
+        throw new Error('PDF generation library not loaded properly. Please refresh the page.');
+      }
+      
+      console.log('PDF generation started for order:', sale.orderNumber);
+      
+      // Header
+      doc.setFontSize(20);
+      doc.setTextColor(59, 130, 246); // Blue color
+      doc.text('DELIVERY NOTE', 105, 20, { align: 'center' });
+      
+      // Horizontal line
+      doc.setDrawColor(59, 130, 246);
+      doc.setLineWidth(0.5);
+      doc.line(20, 25, 190, 25);
+      
+      // Order Information
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Order Number: ${sale.orderNumber || 'N/A'}`, 20, 35);
+      doc.text(`Order Date: ${sale.createdAt ? new Date(sale.createdAt).toLocaleDateString() : 'N/A'}`, 20, 42);
+      doc.text(`Status: ${(sale.status || 'pending').toUpperCase()}`, 20, 49);
+      
+      // Customer Information
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('Customer Information:', 20, 60);
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(10);
+      doc.text(`Name: ${sale.customerInfo?.name || sale.customerName || 'N/A'}`, 20, 67);
+      doc.text(`Email: ${sale.customerInfo?.email || 'N/A'}`, 20, 74);
+      doc.text(`Phone: ${sale.customerInfo?.phone || 'N/A'}`, 20, 81);
+      
+      // Delivery Address
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('Delivery Address:', 20, 92);
+      doc.setFont(undefined, 'normal');
+      doc.setFontSize(10);
+      const deliveryAddr = sale.deliveryAddress || {};
+      doc.text(`${deliveryAddr.street || 'N/A'}`, 20, 99);
+      doc.text(`${deliveryAddr.city || 'N/A'}, ${deliveryAddr.state || 'N/A'} ${deliveryAddr.zipCode || ''}`, 20, 106);
+      doc.text(`${deliveryAddr.country || 'N/A'}`, 20, 113);
+      
+      // Items Table
+      const tableData = sale.items?.map(item => {
+        const unitPrice = parseFloat(item.unitPrice) || 0;
+        const quantity = parseInt(item.quantity) || 0;
+        const total = quantity * unitPrice;
+        
+        return [
+          item.productId?.name || item.productName || 'Unknown Product',
+          item.variantName || '-',
+          quantity,
+          `PKR ${unitPrice.toFixed(2)}`,
+          `PKR ${total.toFixed(2)}`
+        ];
+      }) || [];
+      
+      doc.autoTable({
+        startY: 125,
+        head: [['Product', 'Variant', 'Quantity', 'Unit Price', 'Total']],
+        body: tableData,
+        styles: {
+          fontSize: 9,
+          cellPadding: 3
+        },
+        headStyles: {
+          fillColor: [59, 130, 246],
+          textColor: 255,
+          fontStyle: 'bold'
+        },
+        alternateRowStyles: {
+          fillColor: [249, 250, 251]
+        }
+      });
+      
+      // Total
+      const finalY = doc.lastAutoTable.finalY + 10;
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text(`Total Amount: PKR ${sale.totalAmount?.toLocaleString() || '0'}`, 20, finalY);
+      
+      // Notes
+      if (sale.notes) {
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text('Notes:', 20, finalY + 10);
+        doc.setFont(undefined, 'normal');
+        doc.text(sale.notes, 20, finalY + 17, { maxWidth: 170 });
+      }
+      
+      // Footer
+      doc.setFontSize(8);
+      doc.setTextColor(128, 128, 128);
+      doc.text('Thank you for your business!', 105, 280, { align: 'center' });
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 285, { align: 'center' });
+      
+      // Save PDF
+      doc.save(`Delivery-Note-${sale.orderNumber}.pdf`);
+      
+      toast.dismiss(loadingToast);
+      toast.success('Delivery note downloaded!');
+      
+    } catch (error) {
+      console.error('Error generating delivery note:', error);
+      console.error('Error details:', error.message);
+      console.error('Sale data:', sale);
+      
+      if (loadingToast) {
+        toast.dismiss(loadingToast);
+      }
+      
+      toast.error(`Failed to generate delivery note: ${error.message}`);
+    }
   };
 
   if (loading) {
@@ -572,8 +783,11 @@ const Sales = () => {
                       <span className="font-semibold text-gray-900">{sale.orderNumber}</span>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         sale.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                        sale.status === 'returned' ? 'bg-red-100 text-red-800' :
-                        sale.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                        sale.status === 'returned' || sale.status === 'return' ? 'bg-red-100 text-red-800' :
+                        sale.status === 'dispatched' || sale.status === 'dispatch' ? 'bg-blue-100 text-blue-800' :
+                        sale.status === 'expected' ? 'bg-purple-100 text-purple-800' :
+                        sale.status === 'confirmed' ? 'bg-cyan-100 text-cyan-800' :
+                        sale.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
                         'bg-yellow-100 text-yellow-800'
                       }`}>
                         {sale.status}
@@ -622,8 +836,107 @@ const Sales = () => {
                     <div className="text-sm text-gray-500 mb-2">
                       Customer: {sale.customerId?.name || sale.customerName || 'Unknown'}
                     </div>
-                    <div className="text-xs text-gray-400">
+                    <div className="text-xs text-gray-400 mb-3">
                       {sale.deliveryDate ? `Delivered: ${new Date(sale.deliveryDate).toLocaleDateString()}` : 'Not delivered yet'}
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-2 justify-end">
+                      {/* Delivery Note Button - Always available */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownloadDeliveryNote(sale);
+                        }}
+                        className="btn-ghost flex items-center text-xs px-2 py-1"
+                        title="Download Delivery Note"
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Delivery Note
+                      </button>
+                      
+                      {/* Status Change Buttons */}
+                      {sale.status === 'pending' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStatusChange(sale._id, 'dispatch');
+                          }}
+                          className="btn-primary flex items-center text-xs px-2 py-1"
+                          title="Mark as Dispatched"
+                        >
+                          <Truck className="w-3 h-3 mr-1" />
+                          Dispatch
+                        </button>
+                      )}
+                      
+                      {(sale.status === 'dispatch' || sale.status === 'dispatched') && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(sale._id, 'expected');
+                            }}
+                            className="btn-secondary flex items-center text-xs px-2 py-1"
+                            title="Mark as Expected"
+                          >
+                            <Clock className="w-3 h-3 mr-1" />
+                            Expected
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(sale._id, 'delivered');
+                            }}
+                            className="btn-success flex items-center text-xs px-2 py-1"
+                            title="Mark as Delivered"
+                          >
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Delivered
+                          </button>
+                        </>
+                      )}
+                      
+                      {sale.status === 'expected' && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(sale._id, 'delivered');
+                            }}
+                            className="btn-success flex items-center text-xs px-2 py-1"
+                            title="Mark as Delivered"
+                          >
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Delivered
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(sale._id, 'return');
+                            }}
+                            className="btn-danger flex items-center text-xs px-2 py-1"
+                            title="Mark as Returned"
+                          >
+                            <RotateCcw className="w-3 h-3 mr-1" />
+                            Return
+                          </button>
+                        </>
+                      )}
+                      
+                      {sale.status === 'delivered' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStatusChange(sale._id, 'return');
+                          }}
+                          className="btn-danger flex items-center text-xs px-2 py-1"
+                          title="Mark as Returned"
+                        >
+                          <RotateCcw className="w-3 h-3 mr-1" />
+                          Return
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

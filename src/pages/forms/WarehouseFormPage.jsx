@@ -89,8 +89,13 @@ const WarehouseFormPage = ({ onSuccess }) => {
       };
       
       await api.post('/warehouses', warehouseData);
+      
+      // Wait for the warehouse list to refresh before showing success
+      if (onSuccess) {
+        await onSuccess();
+      }
+      
       toast.success('Warehouse created successfully!');
-      onSuccess?.();
     } catch (err) {
       const errorMessage = err.response?.data?.error || err.message || 'Failed to create warehouse';
       setError(errorMessage);

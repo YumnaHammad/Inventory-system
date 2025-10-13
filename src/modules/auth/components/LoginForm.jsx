@@ -156,24 +156,7 @@ const LoginForm = () => {
           </p>
         </div>
 
-        {/* Demo Credentials */}
-        <div className="card p-6 bg-gradient-to-r from-primary-50 to-blue-50 border-primary-200">
-          <h3 className="text-sm font-semibold text-primary-800 mb-3">
-            Demo Login Credentials
-          </h3>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between items-center">
-              <span className="text-primary-700 font-medium">Admin:</span>
-              <span className="font-mono text-primary-600">
-                admin@example.com / AdminPass123
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-primary-700 font-medium">Status:</span>
-              <span className="font-mono text-green-600">✅ Ready to use</span>
-            </div>
-          </div>
-        </div>
+      
       </div>
     </div>
   );

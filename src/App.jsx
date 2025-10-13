@@ -17,6 +17,8 @@ import SalesFormPage from './pages/forms/SalesFormPage';
 import SupplierFormPage from './pages/forms/SupplierFormPage';
 import SupplierDetailPage from './pages/SupplierDetailPage';
 import UserFormPage from './pages/forms/UserFormPage';
+import AddStockPage from './pages/forms/AddStockPage';
+import SearchResults from './pages/SearchResults';
 
 // Advanced Components
 import AdvancedAdminDashboard from './components/dashboards/AdvancedAdminDashboard';
@@ -67,10 +69,14 @@ function AppRoutes() {
         <Route path="products/:id/edit" element={<Products />} />
         <Route path="warehouses" element={<Warehouses />} />
         <Route path="warehouses/new" element={<Warehouses />} />
+        <Route path="warehouses/:id/add-stock" element={<AddStockPage />} />
         <Route path="sales" element={<Sales />} />
         <Route path="sales/new" element={<Sales />} />
         <Route path="purchases" element={<Purchases />} />
         <Route path="purchases/new" element={<Purchases />} />
+        
+        {/* Search */}
+        <Route path="search" element={<SearchResults />} />
         
         {/* Reports */}
         <Route path="reports" element={<Reports />} />
@@ -163,37 +169,60 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <Router>
+      <AuthProvider>
         <div className="App">
           <AppRoutes />
           <Toaster 
             position="top-right"
+            containerStyle={{
+              zIndex: 99999,
+            }}
             toastOptions={{
               duration: 4000,
               style: {
                 background: '#363636',
                 color: '#fff',
+                zIndex: 99999,
               },
               success: {
                 duration: 3000,
+                style: {
+                  background: '#10b981',
+                  color: '#fff',
+                  fontWeight: '500',
+                  zIndex: 99999,
+                },
                 iconTheme: {
-                  primary: '#4ade80',
-                  secondary: '#fff',
+                  primary: '#fff',
+                  secondary: '#10b981',
                 },
               },
               error: {
                 duration: 5000,
+                style: {
+                  background: '#ef4444',
+                  color: '#fff',
+                  fontWeight: '500',
+                  zIndex: 99999,
+                },
                 iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#fff',
+                  primary: '#fff',
+                  secondary: '#ef4444',
+                },
+              },
+              loading: {
+                style: {
+                  background: '#3b82f6',
+                  color: '#fff',
+                  zIndex: 99999,
                 },
               },
             }}
           />
         </div>
-      </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 

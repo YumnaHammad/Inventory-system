@@ -89,7 +89,7 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
   const SidebarContent = () => (
     <div className="flex grow flex-col gap-y-4 sm:gap-y-5 overflow-y-auto bg-white px-4 sm:px-6 pb-4 shadow-lg">
         {/* Logo Section */}
-      <div className="flex h-14 sm:h-16 shrink-0 items-center justify-between">
+      <div className="flex h-14 sm:h-16 shrink-0 items-center justify-between pt-4 sm:pt-5">
           <div className="flex items-center">
           <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-md">
             <Package className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
