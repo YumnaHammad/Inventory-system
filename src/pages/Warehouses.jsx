@@ -54,13 +54,13 @@ const Warehouses = () => {
     }
     fetchProducts();
 
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 3 seconds for real-time updates
     const pollInterval = setInterval(() => {
       if (location.pathname === '/warehouses') {
         fetchWarehouses();
       }
       fetchProducts();
-    }, 30000);
+    }, 3000);
 
     // Refresh when window gains focus
     const handleFocus = () => {
@@ -463,6 +463,8 @@ const Warehouses = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reserved</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expected Returns</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Returned</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Available</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   </tr>
@@ -491,7 +493,15 @@ const Warehouses = () => {
                         <div className="text-sm font-medium text-gray-900">{stockItem.quantity}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{stockItem.reservedQuantity || 0}</div>
+                        <div className="text-sm text-orange-600 font-medium">{stockItem.reservedQuantity || 0}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-blue-600 font-medium">{stockItem.expectedReturns || 0}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-purple-600 font-medium">
+                          {stockItem.returnedQuantity || 0}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-green-600">

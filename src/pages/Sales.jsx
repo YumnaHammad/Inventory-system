@@ -54,9 +54,9 @@ const Sales = () => {
       const stats = {
         totalSales: salesData.length,
         totalDelivered: salesData.filter(sale => sale.status === 'delivered').length,
-        totalReturns: salesData.filter(sale => sale.status === 'returned' || sale.status === 'return').length,
+        totalReturns: salesData.filter(sale => sale.status === 'returned' || sale.status === 'expected_return').length,
         totalRevenue: salesData
-          .filter(sale => sale.status !== 'returned' && sale.status !== 'return' && sale.status !== 'cancelled')
+          .filter(sale => sale.status !== 'returned' && sale.status !== 'expected_return' && sale.status !== 'cancelled')
           .reduce((sum, sale) => sum + (sale.totalAmount || 0), 0)
       };
       
@@ -274,10 +274,10 @@ const Sales = () => {
       fetchSales();
     };
 
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 3 seconds for real-time updates
     const pollInterval = setInterval(() => {
       fetchSales();
-    }, 30000);
+    }, 3000);
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
@@ -357,17 +357,19 @@ const Sales = () => {
       
       toast.dismiss(loadingToast);
       
-      // Show special message for returns
-      if (newStatus === 'return' || newStatus === 'returned') {
-        if (response.data.stockRestored) {
-          const warehouseName = response.data.warehouseName || 'the warehouse';
-          toast.success(`Order returned! Stock has been restored to ${warehouseName}.`, {
-            duration: 6000,
-            icon: '🔄'
-          });
-        } else {
-          toast.success(`Status updated to ${newStatus}!`);
-        }
+      // Show special message based on status
+      if (newStatus === 'expected_return') {
+        const warehouseName = response.data.warehouseName || 'warehouse';
+        toast.success(`Added to Expected Returns in ${warehouseName}! 📦`, {
+          duration: 5000,
+          icon: '⏳'
+        });
+      } else if (newStatus === 'returned') {
+        const warehouseName = response.data.warehouseName || 'warehouse';
+        toast.success(`Return confirmed! Stock added to ${warehouseName}! ✅`, {
+          duration: 5000,
+          icon: '🔄'
+        });
       } else {
         toast.success(`Status updated to ${newStatus}!`);
       }
@@ -719,14 +721,15 @@ const Sales = () => {
                       <span className="font-semibold text-gray-900">{sale.orderNumber}</span>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         sale.status === 'delivered' ? 'bg-green-100 text-green-800' :
-                        sale.status === 'returned' || sale.status === 'return' ? 'bg-red-100 text-red-800' :
+                        sale.status === 'returned' ? 'bg-red-100 text-red-800' :
+                        sale.status === 'expected_return' ? 'bg-purple-100 text-purple-800' :
                         sale.status === 'dispatched' || sale.status === 'dispatch' ? 'bg-blue-100 text-blue-800' :
-                        sale.status === 'expected' ? 'bg-purple-100 text-purple-800' :
+                        sale.status === 'expected' ? 'bg-indigo-100 text-indigo-800' :
                         sale.status === 'confirmed' ? 'bg-cyan-100 text-cyan-800' :
                         sale.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
                         'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {sale.status}
+                        {sale.status === 'expected_return' ? 'Expected Return' : sale.status}
                       </span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
@@ -752,14 +755,21 @@ const Sales = () => {
                     <div className="mt-3">
                       <p className="text-sm text-gray-500 mb-2">Items:</p>
                       <div className="flex flex-wrap gap-2">
-                        {sale.items?.slice(0, 3).map((item, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs"
-                          >
-                            {item.productId?.name || 'Unknown Product'} (x{item.quantity})
-                          </span>
-                        ))}
+                        {sale.items?.slice(0, 3).map((item, index) => {
+                          const productName = item.productId?.name || 'Unknown Product';
+                          const variantName = item.variantName ? ` - ${item.variantName}` : '';
+                          const displayName = `${productName}${variantName}`;
+                          
+                          return (
+                            <span
+                              key={index}
+                              className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs"
+                              title={`${displayName} (x${item.quantity})`}
+                            >
+                              {displayName} (x{item.quantity})
+                            </span>
+                          );
+                        })}
                         {sale.items?.length > 3 && (
                           <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
                             +{sale.items.length - 3} more
@@ -864,13 +874,13 @@ const Sales = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleStatusChange(sale._id, 'return');
+                            handleStatusChange(sale._id, 'expected_return');
                           }}
-                          className="btn-danger flex items-center text-xs px-2 py-1"
-                          title="Mark as Returned"
+                          className="bg-purple-600 hover:bg-purple-700 text-white flex items-center text-xs px-2 py-1 rounded transition-colors"
+                          title="Mark as Expected Return - Product will appear in Expected Returns module"
                         >
-                          <RotateCcw className="w-3 h-3 mr-1" />
-                          Return
+                          <Clock className="w-3 h-3 mr-1" />
+                          Expected Return
                         </button>
                       )}
                     </div>

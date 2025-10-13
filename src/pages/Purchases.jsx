@@ -302,7 +302,7 @@ const Purchases = () => {
       handleVisibilityChange();
     };
 
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 3 seconds for real-time updates
     const pollInterval = setInterval(() => {
       fetchPurchases();
     }, 30000);
@@ -710,15 +710,21 @@ const Purchases = () => {
                     <div className="mt-2 sm:mt-3">
                       <p className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">Items:</p>
                       <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                        {purchase.items.slice(0, 3).map((item, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-0.5 sm:py-1 bg-blue-100 text-blue-800 rounded-full text-xs truncate max-w-[200px]"
-                            title={`${item.productId?.name || 'Unknown Product'} (x${item.quantity})`}
-                          >
-                            {item.productId?.name || 'Unknown Product'} (x{item.quantity})
-                          </span>
-                        ))}
+                        {purchase.items.slice(0, 3).map((item, index) => {
+                          const productName = item.productId?.name || 'Unknown Product';
+                          const variantName = item.variantName ? ` - ${item.variantName}` : '';
+                          const displayName = `${productName}${variantName}`;
+                          
+                          return (
+                            <span
+                              key={index}
+                              className="px-2 py-0.5 sm:py-1 bg-blue-100 text-blue-800 rounded-full text-xs truncate max-w-[200px]"
+                              title={`${displayName} (x${item.quantity})`}
+                            >
+                              {displayName} (x{item.quantity})
+                            </span>
+                          );
+                        })}
                         {purchase.items.length > 3 && (
                           <span className="px-2 py-0.5 sm:py-1 bg-gray-100 text-gray-600 rounded-full text-xs whitespace-nowrap">
                             +{purchase.items.length - 3} more

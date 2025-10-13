@@ -25,6 +25,7 @@ import AdvancedAdminDashboard from './components/dashboards/AdvancedAdminDashboa
 import AdvancedUserManagement from './pages/AdvancedUserManagement';
 import AdvancedReports from './pages/AdvancedReports';
 import Suppliers from './pages/Suppliers';
+import ExpectedReturns from './pages/ExpectedReturns';
 
 function AppRoutes() {
   const { user } = useAuth();

@@ -42,40 +42,77 @@ const SalesFormPage = ({ onSuccess }) => {
 
   const fetchProducts = async () => {
     try {
-      // Fetch products
+      // Fetch ALL products first
       const productsResponse = await api.get('/products');
       const allProducts = productsResponse.data.products || [];
       
-      // Fetch warehouses to get stock information
+      // Fetch warehouses to get ACTUAL purchased stock (with variants)
       const warehousesResponse = await api.get('/warehouses');
       const warehouses = warehousesResponse.data || [];
       
-      // Create a set of product IDs that have stock in warehouses (i.e., have been purchased)
-      const productsWithStock = new Set();
+      // Track which product+variant combinations have stock
+      const variantStockMap = new Map(); // Key: "productId-variantId", Value: available quantity
       
       warehouses.forEach(warehouse => {
         if (warehouse.currentStock && Array.isArray(warehouse.currentStock)) {
           warehouse.currentStock.forEach(stockItem => {
-            if (stockItem.quantity > 0 || stockItem.reservedQuantity > 0) {
-              productsWithStock.add(stockItem.productId.toString());
+            const totalStock = (stockItem.quantity || 0);
+            const reserved = (stockItem.reservedQuantity || 0);
+            const available = totalStock - reserved;
+            
+            // Only include items that have available stock
+            if (available > 0) {
+              const productId = stockItem.productId?._id || stockItem.productId;
+              const variantId = stockItem.variantId || 'no-variant';
+              
+              if (productId) {
+                const key = `${productId}-${variantId}`;
+                const currentStock = variantStockMap.get(key) || 0;
+                variantStockMap.set(key, currentStock + available);
+              }
             }
           });
         }
       });
       
-      // Filter products to only show those with stock (that have been purchased)
-      const purchasedProducts = allProducts.filter(product => 
-        productsWithStock.has(product._id.toString())
-      );
+      // Filter products and their variants based on actual stock
+      const purchasedProducts = allProducts.map(product => {
+        if (product.hasVariants && product.variants && product.variants.length > 0) {
+          // Filter variants to only show those with stock
+          const variantsWithStock = product.variants.filter(variant => {
+            const key = `${product._id}-${variant._id || variant.sku}`;
+            return variantStockMap.has(key) && variantStockMap.get(key) > 0;
+          });
+          
+          // Only include product if it has variants with stock
+          if (variantsWithStock.length > 0) {
+            return {
+              ...product,
+              variants: variantsWithStock // ONLY purchased variants
+            };
+          }
+          return null;
+        } else {
+          // No variants - check if product itself has stock
+          const key = `${product._id}-no-variant`;
+          if (variantStockMap.has(key) && variantStockMap.get(key) > 0) {
+            return product;
+          }
+          return null;
+        }
+      }).filter(Boolean); // Remove nulls
       
       setProducts(purchasedProducts);
       
       if (purchasedProducts.length === 0) {
-        toast.info('No products in stock. Please purchase products first.');
+        toast.info('No products in stock. Please purchase products first.', {
+          duration: 4000,
+          icon: '📦'
+        });
       }
     } catch (error) {
-      // Silently handle error - don't show console error
-      toast.error('Failed to fetch products');
+      // Don't show error if it's just no data
+      setProducts([]);
     }
   };
 
@@ -218,7 +255,7 @@ const SalesFormPage = ({ onSuccess }) => {
         }
       }));
     } catch (error) {
-      console.error('Error checking stock:', error);
+      // Silently handle error - stock check is informational only
     }
   };
 
@@ -318,8 +355,29 @@ const SalesFormPage = ({ onSuccess }) => {
         navigate('/sales');
       }
     } catch (error) {
-      console.error('Error creating sales order:', error);
-      toast.error(error.response?.data?.error || 'Failed to create sales order');
+      // Show detailed error message from backend
+      const errorData = error.response?.data;
+      let errorMessage = 'Failed to create sales order. Please check stock availability.';
+      
+      if (errorData) {
+        if (errorData.error) {
+          errorMessage = errorData.error;
+          // Add details if available
+          if (errorData.details) {
+            errorMessage += `. ${errorData.details}`;
+          }
+        } else if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        }
+      }
+      
+      toast.error(errorMessage, {
+        duration: 6000,
+        icon: '❌',
+        style: {
+          maxWidth: '500px'
+        }
+      });
     } finally {
       setLoading(false);
     }

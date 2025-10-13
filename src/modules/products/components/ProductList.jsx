@@ -43,10 +43,10 @@ const ProductList = () => {
   useEffect(() => {
     fetchProducts();
 
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 3 seconds for real-time updates
     const pollInterval = setInterval(() => {
       fetchProducts();
-    }, 30000);
+    }, 3000);
 
     // Refresh when window gains focus
     const handleFocus = () => {

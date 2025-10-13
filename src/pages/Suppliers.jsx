@@ -164,10 +164,10 @@ const Suppliers = () => {
   useEffect(() => {
     fetchSuppliers();
 
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 3 seconds for real-time updates
     const pollInterval = setInterval(() => {
       fetchSuppliers();
-    }, 30000);
+    }, 3000);
 
     // Refresh when window gains focus
     const handleFocus = () => {

@@ -145,14 +145,20 @@ export const generateDocumentPDF = (documentData, type = 'invoice') => {
     // ITEMS TABLE - MODERN STYLING
     // ============================================
     
-    const tableData = purchase.items.map((item, index) => [
-      index + 1,
-      String(item.productId?.name || 'Unknown Product'),
-      String(item.productId?.sku || 'N/A'),
-      item.quantity,
-      `PKR ${parseFloat(item.unitPrice || 0).toFixed(2)}`,
-      `PKR ${parseFloat(item.totalPrice || 0).toFixed(2)}`
-    ]);
+    const tableData = purchase.items.map((item, index) => {
+      const productName = String(item.productId?.name || 'Unknown Product');
+      const variantName = item.variantName ? ` - ${item.variantName}` : '';
+      const fullProductName = `${productName}${variantName}`;
+      
+      return [
+        index + 1,
+        fullProductName,
+        String(item.productId?.sku || 'N/A'),
+        item.quantity,
+        `PKR ${parseFloat(item.unitPrice || 0).toFixed(2)}`,
+        `PKR ${parseFloat(item.totalPrice || 0).toFixed(2)}`
+      ];
+    });
     
     try {
       autoTable(doc, {
