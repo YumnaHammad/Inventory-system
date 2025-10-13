@@ -448,7 +448,7 @@ const AdvancedUserManagement = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             {/* Title Section - Full width on mobile */}
             <div className="w-full sm:w-auto">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">User Management</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">uUser Management</h1>
               <p className="text-sm sm:text-base text-gray-600 mt-1">Comprehensive user control and permissions</p>
             </div>
             
