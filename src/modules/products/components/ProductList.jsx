@@ -39,30 +39,19 @@ const ProductList = () => {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    fetchProducts();
-
-    // Auto-refresh every 3 seconds for real-time updates
-    const pollInterval = setInterval(() => {
-      fetchProducts();
-    }, 3000);
-
-    // Refresh when window gains focus
-    const handleFocus = () => {
-      fetchProducts();
-    };
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      clearInterval(pollInterval);
-      window.removeEventListener('focus', handleFocus);
-    };
+    fetchProducts(true);
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (isInitialLoad = false) => {
     try {
-      setLoading(true);
+      if (isInitialLoad) {
+        setLoading(true);
+      } else {
+        setRefreshing(true);
+      }
       const response = await api.get('/products');
       const productsData = response.data.products || response.data;
       // Sort by creation date - newest first
@@ -75,6 +64,7 @@ const ProductList = () => {
       console.error('Error fetching products:', err);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -257,10 +247,11 @@ const ProductList = () => {
             <option value="price">Sort by Price</option>
           </select>
           <button
-            onClick={fetchProducts}
-            className="btn-secondary flex items-center justify-center"
+            onClick={() => fetchProducts(false)}
+            disabled={refreshing}
+            className="btn-secondary flex items-center justify-center disabled:opacity-50"
           >
-            <Filter className="h-4 w-4 mr-2" />
+            <Filter className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>

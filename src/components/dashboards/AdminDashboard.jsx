@@ -64,9 +64,6 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-    // Set up auto-refresh every 5 minutes
-    const interval = setInterval(fetchDashboardData, 300000);
-    return () => clearInterval(interval);
   }, []);
 
   const fetchDashboardData = async (showRefresh = false) => {

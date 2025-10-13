@@ -302,22 +302,6 @@ const AdvancedReports = () => {
 
   useEffect(() => {
     fetchReportData();
-    
-    // Auto-refresh every 3 seconds for real-time updates
-    const pollInterval = setInterval(() => {
-      fetchReportData();
-    }, 3000);
-    
-    // Refresh on window focus
-    const handleFocus = () => {
-      fetchReportData();
-    };
-    window.addEventListener('focus', handleFocus);
-    
-    return () => {
-      clearInterval(pollInterval);
-      window.removeEventListener('focus', handleFocus);
-    };
   }, [dateRange, selectedWarehouse, selectedCategory]);
 
   // Component for Metric Cards

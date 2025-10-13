@@ -255,67 +255,7 @@ const Purchases = () => {
     }
   }, [location.state, navigate, location.pathname]);
 
-  // Refresh data when component becomes visible (e.g., after navigation)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        // Check for temporary purchases first
-        const tempPurchases = JSON.parse(localStorage.getItem('tempPurchases') || '[]');
-        if (tempPurchases.length > 0) {
-          // Merge temporary purchases with current state
-          setPurchases(prev => {
-            const existingIds = new Set(prev.map(p => p._id));
-            const newPurchases = tempPurchases.filter(p => !existingIds.has(p._id));
-            if (newPurchases.length > 0) {
-              // Update stats
-              setPurchaseStats(prevStats => {
-                const newStats = { ...prevStats };
-                newPurchases.forEach(purchase => {
-                  newStats.totalPurchases += 1;
-                  newStats.totalItems += purchase.items ? 
-                    purchase.items.reduce((sum, item) => sum + item.quantity, 0) : 0;
-                  newStats.totalValue += purchase.totalAmount || 0;
-                });
-                return newStats;
-              });
-              
-              // Highlight the most recent purchase
-              if (newPurchases[0]) {
-                setNewlyAddedPurchaseId(newPurchases[0]._id);
-                setTimeout(() => setNewlyAddedPurchaseId(null), 3000);
-              }
-              
-              return [...newPurchases, ...prev];
-            }
-            return prev;
-          });
-          
-          // Clear temporary purchases
-          localStorage.removeItem('tempPurchases');
-        } else {
-        fetchPurchases();
-        }
-      }
-    };
-
-    const handleFocus = () => {
-      handleVisibilityChange();
-    };
-
-    // Auto-refresh every 3 seconds for real-time updates
-    const pollInterval = setInterval(() => {
-      fetchPurchases();
-    }, 30000);
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      clearInterval(pollInterval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, []);
+  // Removed auto-refresh to prevent UI disturbance
 
   // Filter purchases by time period
   const getFilteredPurchases = () => {

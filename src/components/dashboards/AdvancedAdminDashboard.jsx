@@ -357,15 +357,8 @@ const AdvancedAdminDashboard = () => {
     setSystemAlerts(mockAlerts);
   };
 
-  // Auto-refresh every 30 seconds
   useEffect(() => {
     fetchDashboardData();
-    
-    const interval = setInterval(() => {
-      fetchDashboardData();
-    }, 30000);
-
-    return () => clearInterval(interval);
   }, []);
 
   // Component for Stat Cards

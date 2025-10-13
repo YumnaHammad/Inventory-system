@@ -163,22 +163,6 @@ const Suppliers = () => {
 
   useEffect(() => {
     fetchSuppliers();
-
-    // Auto-refresh every 3 seconds for real-time updates
-    const pollInterval = setInterval(() => {
-      fetchSuppliers();
-    }, 3000);
-
-    // Refresh when window gains focus
-    const handleFocus = () => {
-      fetchSuppliers();
-    };
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      clearInterval(pollInterval);
-      window.removeEventListener('focus', handleFocus);
-    };
   }, []);
 
   // Handle sorting

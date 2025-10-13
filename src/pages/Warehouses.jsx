@@ -53,28 +53,6 @@ const Warehouses = () => {
       fetchWarehouses();
     }
     fetchProducts();
-
-    // Auto-refresh every 3 seconds for real-time updates
-    const pollInterval = setInterval(() => {
-      if (location.pathname === '/warehouses') {
-        fetchWarehouses();
-      }
-      fetchProducts();
-    }, 3000);
-
-    // Refresh when window gains focus
-    const handleFocus = () => {
-      if (location.pathname === '/warehouses') {
-        fetchWarehouses();
-      }
-      fetchProducts();
-    };
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      clearInterval(pollInterval);
-      window.removeEventListener('focus', handleFocus);
-    };
   }, [location.pathname]);
 
   // Ensure products is always an array to prevent map errors
@@ -452,21 +430,78 @@ const Warehouses = () => {
 
         {/* Product Stock Details */}
         <div className="card p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Inventory</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Product Inventory</h3>
+            <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-blue-100 rounded"></div>
+                <span className="text-gray-600">Total Stock</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-orange-100 rounded"></div>
+                <span className="text-gray-600">Reserved (Sold)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-purple-100 rounded"></div>
+                <span className="text-gray-600">Expected Return (Not received yet)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-indigo-100 rounded"></div>
+                <span className="text-gray-600">Returned (Received back)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-green-100 rounded"></div>
+                <span className="text-gray-600">Available Now</span>
+              </div>
+            </div>
+          </div>
           {selectedWarehouse.currentStock && selectedWarehouse.currentStock.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reserved</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expected Returns</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Returned</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Available</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Product
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      SKU
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Category
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <div className="flex items-center gap-1">
+                        Total Stock
+                        <span className="text-gray-400" title="Total quantity in warehouse">ℹ️</span>
+                      </div>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <div className="flex items-center gap-1">
+                        Reserved
+                        <span className="text-gray-400" title="Items sold but not yet delivered">⚠️</span>
+                      </div>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <div className="flex items-center gap-1">
+                        Expected Return
+                        <span className="text-gray-400" title="Items marked for return but not yet received back">⏳</span>
+                      </div>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <div className="flex items-center gap-1">
+                        Received Back
+                        <span className="text-gray-400" title="Items returned and received back to warehouse">✅</span>
+                      </div>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <div className="flex items-center gap-1">
+                        Available Now
+                        <span className="text-gray-400" title="Items available for sale right now">✓</span>
+                      </div>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -490,32 +525,59 @@ const Warehouses = () => {
                         <div className="text-sm text-gray-500">{stockItem.productId?.category || 'N/A'}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{stockItem.quantity}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-orange-600 font-medium">{stockItem.reservedQuantity || 0}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-blue-600 font-medium">{stockItem.expectedReturns || 0}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-purple-600 font-medium">
-                          {stockItem.returnedQuantity || 0}
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <span className="text-sm font-bold text-gray-900">{stockItem.quantity}</span>
+                          <span className="text-xs text-gray-500">units</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-green-600">
-                          {(stockItem.quantity || 0) - (stockItem.reservedQuantity || 0)}
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                          <span className="text-sm font-bold text-orange-600">{stockItem.reservedQuantity || 0}</span>
+                          <span className="text-xs text-gray-500">sold</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-3 h-3 text-purple-600" />
+                            <span className="text-sm font-bold text-purple-600">{stockItem.expectedReturns || 0}</span>
+                            <span className="text-xs text-gray-500">pending</span>
+                          </div>
+                          {(stockItem.expectedReturns || 0) > 0 && (
+                            <span className="text-xs text-purple-600 italic">
+                              Awaiting return
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-3 h-3 text-indigo-600" />
+                          <span className="text-sm font-bold text-indigo-600">
+                            {stockItem.returnedQuantity || 0}
+                          </span>
+                          <span className="text-xs text-gray-500">received</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                          <span className="text-sm font-bold text-green-600">
+                            {(stockItem.quantity || 0) - (stockItem.reservedQuantity || 0)}
+                          </span>
+                          <span className="text-xs text-gray-500">ready</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-1">
                           {stockItem.tags && stockItem.tags.length > 0 ? (
-                            <div className="flex space-x-1">
+                            <div className="flex flex-wrap gap-1">
                               {stockItem.tags.map((tag, tagIndex) => (
                                 <span 
                                   key={tagIndex}
-                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                                     tag === 'returned' ? 'bg-blue-100 text-blue-800' :
                                     tag === 'damaged' ? 'bg-red-100 text-red-800' :
                                     tag === 'expired' ? 'bg-orange-100 text-orange-800' :
@@ -527,7 +589,10 @@ const Warehouses = () => {
                               ))}
                             </div>
                           ) : (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <div className="flex items-center gap-1">
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                              <span className="text-xs text-green-600 font-medium">Good</span>
+                            </div>
                           )}
                         </div>
                       </td>

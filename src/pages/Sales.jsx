@@ -262,32 +262,7 @@ const Sales = () => {
     }
   }, [location.state, navigate, location.pathname]);
 
-  // Refresh data when component becomes visible (e.g., after navigation)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        fetchSales();
-      }
-    };
-
-    const handleFocus = () => {
-      fetchSales();
-    };
-
-    // Auto-refresh every 3 seconds for real-time updates
-    const pollInterval = setInterval(() => {
-      fetchSales();
-    }, 3000);
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      clearInterval(pollInterval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, []);
+  // Removed auto-refresh to prevent UI disturbance
 
   // Handle card clicks
   const handleCardClick = (cardType) => {
@@ -569,6 +544,15 @@ const Sales = () => {
         
         {/* Controls Section - Full width on mobile */}
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+          <button 
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center px-3 py-1.5 sm:py-2 text-gray-600 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm whitespace-nowrap disabled:opacity-50"
+            title="Refresh sales from database"
+          >
+            <RefreshCw className={`h-4 w-4 mr-1 sm:mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
           <ExportButton
             data={getFilteredSales()}
             filename="sales"
