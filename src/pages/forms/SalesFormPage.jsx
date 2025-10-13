@@ -42,10 +42,39 @@ const SalesFormPage = ({ onSuccess }) => {
 
   const fetchProducts = async () => {
     try {
-      const response = await api.get('/products');
-      setProducts(response.data.products || []);
+      // Fetch products
+      const productsResponse = await api.get('/products');
+      const allProducts = productsResponse.data.products || [];
+      
+      // Fetch warehouses to get stock information
+      const warehousesResponse = await api.get('/warehouses');
+      const warehouses = warehousesResponse.data || [];
+      
+      // Create a set of product IDs that have stock in warehouses (i.e., have been purchased)
+      const productsWithStock = new Set();
+      
+      warehouses.forEach(warehouse => {
+        if (warehouse.currentStock && Array.isArray(warehouse.currentStock)) {
+          warehouse.currentStock.forEach(stockItem => {
+            if (stockItem.quantity > 0 || stockItem.reservedQuantity > 0) {
+              productsWithStock.add(stockItem.productId.toString());
+            }
+          });
+        }
+      });
+      
+      // Filter products to only show those with stock (that have been purchased)
+      const purchasedProducts = allProducts.filter(product => 
+        productsWithStock.has(product._id.toString())
+      );
+      
+      setProducts(purchasedProducts);
+      
+      if (purchasedProducts.length === 0) {
+        toast.info('No products in stock. Please purchase products first.');
+      }
     } catch (error) {
-      console.error('Error fetching products:', error);
+      // Silently handle error - don't show console error
       toast.error('Failed to fetch products');
     }
   };

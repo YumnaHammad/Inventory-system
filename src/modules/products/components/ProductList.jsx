@@ -42,6 +42,22 @@ const ProductList = () => {
 
   useEffect(() => {
     fetchProducts();
+
+    // Auto-refresh every 30 seconds
+    const pollInterval = setInterval(() => {
+      fetchProducts();
+    }, 30000);
+
+    // Refresh when window gains focus
+    const handleFocus = () => {
+      fetchProducts();
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const fetchProducts = async () => {
@@ -280,12 +296,13 @@ const ProductList = () => {
                     >
                       <Eye className="h-4 w-4" />
                     </button>
-                    <button
+                    {/* Edit button commented out as requested */}
+                    {/* <button
                       onClick={() => navigate(`/products/${product._id}/edit`)}
                       className="text-gray-400 hover:text-blue-600"
                     >
                       <Edit className="h-4 w-4" />
-                    </button>
+                    </button> */}
                     <button
                       onClick={() => openDeleteModal(product)}
                       className="text-gray-400 hover:text-red-600"
@@ -488,13 +505,14 @@ const ProductList = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button
+                          {/* Edit button commented out as requested */}
+                          {/* <button
                             onClick={() => navigate(`/products/${product._id}/edit`)}
                             className="text-gray-400 hover:text-blue-600 transition-colors"
                             title="Edit Product"
                           >
                             <Edit className="h-4 w-4" />
-                          </button>
+                          </button> */}
                           <button
                             onClick={() => openDeleteModal(product)}
                             className="text-gray-400 hover:text-red-600 transition-colors"

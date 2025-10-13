@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Package, Plus, Minus, Trash2, Save, ArrowLeft, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
+import { Package, Plus, Minus, Trash2, Save, ArrowLeft, Loader2, AlertCircle, CheckCircle, Warehouse, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 
@@ -10,6 +11,8 @@ const PurchaseFormPage = ({ onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
+  const [warehouses, setWarehouses] = useState([]);
+  const [showNoWarehouseModal, setShowNoWarehouseModal] = useState(false);
   const [formData, setFormData] = useState({
     supplierId: '',
     expectedDeliveryDate: '',
@@ -22,9 +25,24 @@ const PurchaseFormPage = ({ onSuccess }) => {
   const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
+    checkWarehouses();
     fetchSuppliers();
     fetchProducts();
   }, []);
+
+  const checkWarehouses = async () => {
+    try {
+      const response = await api.get('/warehouses');
+      const warehousesData = response.data || [];
+      setWarehouses(warehousesData);
+      
+      if (warehousesData.length === 0) {
+        setShowNoWarehouseModal(true);
+      }
+    } catch (error) {
+      console.error('Error checking warehouses:', error);
+    }
+  };
 
   const fetchSuppliers = async () => {
     try {
@@ -161,6 +179,13 @@ const PurchaseFormPage = ({ onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Check if warehouses exist
+    if (warehouses.length === 0) {
+      setShowNoWarehouseModal(true);
+      toast.error('Cannot create purchase order without a warehouse');
+      return;
+    }
     
     if (!validateForm()) {
       toast.error('Please fix validation errors');
@@ -566,6 +591,105 @@ const PurchaseFormPage = ({ onSuccess }) => {
         </div>
         </motion.form>
       </div>
+
+      {/* No Warehouse Warning Modal */}
+      {showNoWarehouseModal && createPortal(
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                navigate('/purchases');
+              }
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                    <Warehouse className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900">No Warehouse Found</h3>
+                    <p className="text-sm text-gray-500 mt-1">Action Required</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => navigate('/purchases')}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mb-6">
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm text-orange-800 font-medium mb-1">
+                        Cannot Create Purchase Order
+                      </p>
+                      <p className="text-sm text-orange-700">
+                        You need to create at least one warehouse before you can purchase products.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Warehouses are required to store purchased products. Please create a warehouse first:
+                  </p>
+                  <ul className="text-sm text-gray-600 space-y-2 ml-5">
+                    <li className="flex items-start">
+                      <span className="text-blue-600 mr-2">•</span>
+                      <span>Go to <strong>Warehouses</strong> module</span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-blue-600 mr-2">•</span>
+                      <span>Click <strong>"Add Warehouse"</strong></span>
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-blue-600 mr-2">•</span>
+                      <span>Fill in the warehouse details and save</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => navigate('/purchases')}
+                  className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Go Back
+                </button>
+                <button
+                  onClick={() => {
+                    setShowNoWarehouseModal(false);
+                    navigate('/warehouses');
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center justify-center space-x-2"
+                >
+                  <Warehouse className="w-4 h-4" />
+                  <span>Create Warehouse</span>
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 };

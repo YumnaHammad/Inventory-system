@@ -114,13 +114,14 @@ const ExportButton = ({
                   Export as PDF
                 </button>
                 
-                <button
+                {/* CSV export removed as per request */}
+                {/* <button
                   onClick={() => handleExport('csv')}
                   className="w-full flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
                 >
                   <Download className="w-4 h-4 mr-3 text-blue-600" />
                   Export as CSV
-                </button>
+                </button> */}
               </div>
             </motion.div>
           )}
@@ -182,13 +183,14 @@ const ExportButton = ({
                 Export as PDF
               </button>
               
-              <button
+              {/* CSV export removed as per request */}
+              {/* <button
                 onClick={() => handleExport('csv')}
                 className="w-full flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors duration-200"
               >
                 <Download className="w-4 h-4 mr-3 text-blue-600" />
                 Export as CSV
-              </button>
+              </button> */}
             </div>
           </motion.div>
         )}

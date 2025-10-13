@@ -62,25 +62,8 @@ const Sales = () => {
       
       setSalesStats(stats);
       
-      // Debug: Log the received data
-      console.log('Sales API Response:', response.data);
-      console.log('Sales Data:', salesData);
-      console.log('Number of sales:', salesData.length);
-      
-      // If no real data exists, show a helpful message instead of dummy data
-      if (salesData.length === 0) {
-        console.log('No sales found in database');
-      } else {
-        console.log('Successfully loaded', salesData.length, 'sales from database');
-      }
-      
     } catch (error) {
       console.error('Error fetching sales:', error);
-      console.error('API Error Details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
       
       // Show empty state instead of dummy data
       setSales([]);
@@ -291,10 +274,16 @@ const Sales = () => {
       fetchSales();
     };
 
+    // Auto-refresh every 30 seconds
+    const pollInterval = setInterval(() => {
+      fetchSales();
+    }, 30000);
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
 
     return () => {
+      clearInterval(pollInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
     };
@@ -302,26 +291,7 @@ const Sales = () => {
 
   // Handle card clicks
   const handleCardClick = (cardType) => {
-    switch (cardType) {
-      case 'total':
-        console.log('Viewing all sales orders');
-        // You can add navigation to a detailed view here
-        break;
-      case 'delivered':
-        console.log('Viewing delivered orders');
-        // Filter to show only delivered orders
-        break;
-      case 'returns':
-        console.log('Viewing returned orders');
-        // Filter to show only returned orders
-        break;
-      case 'revenue':
-        console.log('Viewing revenue details');
-        // Navigate to revenue analytics
-        break;
-      default:
-        break;
-    }
+    // Future: Add navigation to detailed views
   };
 
   // Filter sales by time period
@@ -357,13 +327,10 @@ const Sales = () => {
   // Handle filter change
   const handleFilterChange = (newFilter) => {
     setTimeFilter(newFilter);
-    console.log(`Filter changed to: ${newFilter}`);
-    // The filtered data will update automatically via getFilteredSales()
   };
 
   // Handle refresh button click
   const handleRefresh = () => {
-    console.log('Refreshing sales data...');
     fetchSales();
   };
 
@@ -377,11 +344,9 @@ const Sales = () => {
   const handleStatusChange = async (saleId, newStatus) => {
     let loadingToast;
     try {
-      console.log('Updating status:', { saleId, newStatus });
       loadingToast = toast.loading(`Updating status to ${newStatus}...`);
       
       const response = await api.patch(`/sales/${saleId}/status`, { status: newStatus });
-      console.log('Status update response:', response.data);
       
       // Update local state
       setSales(prevSales =>
@@ -445,8 +410,6 @@ const Sales = () => {
         console.error('autoTable not available on jsPDF instance');
         throw new Error('PDF generation library not loaded properly. Please refresh the page.');
       }
-      
-      console.log('PDF generation started for order:', sale.orderNumber);
       
       // Header
       doc.setFontSize(20);
@@ -614,17 +577,7 @@ const Sales = () => {
           />
           <button 
             className="btn-primary flex items-center flex-1 sm:flex-initial justify-center" 
-            onClick={() => {
-              console.log('New Sales Order button clicked');
-              console.log('Current location:', location.pathname);
-              console.log('Navigating to: /sales/new');
-              try {
-                navigate('/sales/new');
-                console.log('Navigation command executed');
-              } catch (error) {
-                console.error('Navigation error:', error);
-              }
-            }}
+            onClick={() => navigate('/sales/new')}
           >
             <Plus className="h-4 w-4 mr-2" />
             <span className="hidden sm:inline">New Sales Order</span>
@@ -703,20 +656,6 @@ const Sales = () => {
         </motion.div>
       </div>
 
-      {/* Debug Info Panel - Remove this in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-blue-900 mb-2">Debug Information</h3>
-          <div className="text-xs text-blue-800 space-y-1">
-            <p>Total Sales in State: {sales.length}</p>
-            <p>Filtered Sales: {getFilteredSales().length}</p>
-            <p>Current Filter: {timeFilter}</p>
-            <p>API Endpoint: /sales?limit=1000</p>
-            <p>Last Refresh: {new Date().toLocaleTimeString()}</p>
-          </div>
-        </div>
-      )}
-
       {/* Sales Records Section */}
       <div className="card p-6">
         <div className="flex justify-between items-center mb-6">
@@ -755,10 +694,7 @@ const Sales = () => {
               {timeFilter === 'all' ? 'Start by creating your first sales order to see real data' : `No sales found for the selected ${timeFilter} period`}
             </p>
             <button
-              onClick={() => {
-                console.log('Create Your First Sales Order button clicked');
-                navigate('/sales/new');
-              }}
+              onClick={() => navigate('/sales/new')}
               className="btn-primary mt-4"
             >
               Create Your First Sales Order

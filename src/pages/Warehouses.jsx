@@ -53,6 +53,28 @@ const Warehouses = () => {
       fetchWarehouses();
     }
     fetchProducts();
+
+    // Auto-refresh every 30 seconds
+    const pollInterval = setInterval(() => {
+      if (location.pathname === '/warehouses') {
+        fetchWarehouses();
+      }
+      fetchProducts();
+    }, 30000);
+
+    // Refresh when window gains focus
+    const handleFocus = () => {
+      if (location.pathname === '/warehouses') {
+        fetchWarehouses();
+      }
+      fetchProducts();
+    };
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [location.pathname]);
 
   // Ensure products is always an array to prevent map errors

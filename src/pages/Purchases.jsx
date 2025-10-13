@@ -49,11 +49,6 @@ const Purchases = () => {
         return new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id);
       });
       
-      // Debug: Log the received data
-      console.log('API Response:', response.data);
-      console.log('Purchases Data:', sortedPurchases);
-      console.log('Number of purchases:', sortedPurchases.length);
-      
       // Always use real data from API, even if empty
       setPurchases(sortedPurchases);
       
@@ -67,19 +62,8 @@ const Purchases = () => {
       
       setPurchaseStats(stats);
       
-      // Debug: Log the calculated stats
-      console.log('Calculated Stats:', stats);
-      
-      // If no real data exists, show a helpful message instead of dummy data
-      if (purchasesData.length === 0) {
-        console.log('No purchases found in database');
-      } else {
-        console.log('Successfully loaded', purchasesData.length, 'purchases from database');
-      }
-      
     } catch (error) {
       console.error('Error fetching purchases:', error);
-      console.error('Full error details:', error.response?.data || error.message);
       
       // Set empty state if API fails
       setPurchases([]);
@@ -318,10 +302,16 @@ const Purchases = () => {
       handleVisibilityChange();
     };
 
+    // Auto-refresh every 30 seconds
+    const pollInterval = setInterval(() => {
+      fetchPurchases();
+    }, 30000);
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
 
     return () => {
+      clearInterval(pollInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
     };
@@ -360,15 +350,10 @@ const Purchases = () => {
   // Handle filter change
   const handleFilterChange = (newFilter) => {
     setTimeFilter(newFilter);
-    console.log(`Purchase filter changed to: ${newFilter}`);
-    // The filtered data will update automatically via getFilteredPurchases()
   };
 
   // Handle refresh button click
   const handleRefresh = () => {
-    console.log('Refreshing purchases data...');
-    console.log('Current purchases count:', purchases.length);
-    console.log('Current stats:', purchaseStats);
     fetchPurchases();
   };
 
@@ -387,13 +372,9 @@ const Purchases = () => {
   // Export purchases data
   const handleExportPurchases = async (format = 'excel') => {
     try {
-      console.log('Export format received:', format, typeof format);
       const filteredData = getFilteredPurchases();
-      console.log('Filtered purchases data:', filteredData);
-      
       const { exportPurchases } = await import('../utils/exportUtils');
       const result = exportPurchases(filteredData, format);
-      console.log('Export result:', result);
       return result;
     } catch (error) {
       console.error('Export error in handleExportPurchases:', error);
@@ -512,17 +493,7 @@ const Purchases = () => {
           />
           <button 
             className="btn-primary flex items-center whitespace-nowrap" 
-            onClick={() => {
-              console.log('New Purchase Order button clicked');
-              console.log('Current location:', location.pathname);
-              console.log('Navigating to: /purchases/new');
-              try {
-                navigate('/purchases/new');
-                console.log('Navigation command executed');
-              } catch (error) {
-                console.error('Navigation error:', error);
-              }
-            }}
+            onClick={() => navigate('/purchases/new')}
           >
             <Plus className="h-4 w-4 mr-1 sm:mr-2" />
             <span className="hidden sm:inline">New Purchase Order</span>
@@ -581,20 +552,6 @@ const Purchases = () => {
         </motion.div>
       </div>
 
-      {/* Debug Info Panel - Remove this in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-blue-900 mb-2">Debug Information</h3>
-          <div className="text-xs text-blue-800 space-y-1">
-            <p>Total Purchases in State: {purchases.length}</p>
-            <p>Filtered Purchases: {getFilteredPurchases().length}</p>
-            <p>Current Filter: {timeFilter}</p>
-            <p>API Endpoint: /purchases?limit=1000</p>
-            <p>Last Refresh: {new Date().toLocaleTimeString()}</p>
-          </div>
-        </div>
-      )}
-
       {/* Purchase Records Section */}
       <div className="card p-4 sm:p-5 md:p-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 sm:mb-6 gap-3">
@@ -633,10 +590,7 @@ const Purchases = () => {
               {timeFilter === 'all' ? 'Start by creating your first purchase order to see real data' : `No purchases found for the selected ${timeFilter} period`}
             </p>
             <button
-              onClick={() => {
-                console.log('Create Your First Purchase Order button clicked');
-                navigate('/purchases/new');
-              }}
+              onClick={() => navigate('/purchases/new')}
               className="btn-primary mt-4"
             >
               Create Your First Purchase Order
