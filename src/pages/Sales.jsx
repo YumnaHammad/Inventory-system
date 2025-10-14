@@ -337,15 +337,11 @@ const Sales = () => {
         
         const expectedReturnsRes = await api.get('/expected-returns');
         const expectedReturn = expectedReturnsRes.data.expectedReturns?.find(
-          er => er.salesOrderId === confirmSale._id && er.status === 'pending'
+          (er) => ((er.salesOrderId && (er.salesOrderId._id || er.salesOrderId)) === confirmSale._id) && er.status === 'pending'
         );
         
         if (expectedReturn) {
-          await api.patch(`/expected-returns/${expectedReturn._id}/status`, {
-            status: 'received',
-            actualReturnDate: new Date().toISOString(),
-            notes: 'Return confirmed from sales page'
-          });
+          await api.post(`/expected-returns/${expectedReturn._id}/receive`);
           
           toast.dismiss(loadingToast);
           toast.success('Return received! Stock added back to warehouse ✅', {
@@ -922,7 +918,7 @@ const Sales = () => {
             
             <div className="p-6">
               <p className="text-gray-600 mb-4">
-                {confirmAction === 'dispatch' && `Are you sure you want to dispatch order ${confirmSale?.orderNumber}? This will release reserved stock.`}
+                {confirmAction === 'dispatch' && `Are you sure you want to dispatch order ${confirmSale?.orderNumber}? This will reserve stock in warehouse.`}
                 {confirmAction === 'delivered' && `Are you sure you want to mark order ${confirmSale?.orderNumber} as delivered?`}
                 {confirmAction === 'expected_return' && `Are you sure you want to mark order ${confirmSale?.orderNumber} as expected return? This will add it to the Expected Returns module.`}
                 {confirmAction === 'returnReceived' && `Are you sure you want to confirm that the return for order ${confirmSale?.orderNumber} has been received back to warehouse?`}
@@ -957,4 +953,4 @@ const Sales = () => {
   );
 };
 
-export default Sales;
+export default Sales

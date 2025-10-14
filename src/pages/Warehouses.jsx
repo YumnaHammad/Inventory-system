@@ -605,7 +605,7 @@ const Warehouses = () => {
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                           <span className="text-sm font-bold text-green-600">
-                            {(stockItem.quantity || 0) - (stockItem.reservedQuantity || 0) - (stockItem.deliveredQuantity || 0)}
+                            {(stockItem.quantity || 0) - (stockItem.reservedQuantity || 0)}
                           </span>
                           <span className="text-xs text-gray-500">ready</span>
                         </div>
