@@ -129,7 +129,8 @@ const PurchaseFormPage = ({ onSuccess }) => {
     const product = products.find(p => p._id === productId);
     if (product && product.variants) {
       const variant = product.variants.find(v => v._id === variantId);
-      return variant ? variant.costPrice || variant.sellingPrice : 0;
+      // return variant ? variant.costPrice || variant.sellingPrice : 0;
+      return variant ? variant.sellingPrice : 0;
     }
     return 0;
   };
@@ -455,7 +456,7 @@ const PurchaseFormPage = ({ onSuccess }) => {
                               <option value="">Select Variant</option>
                               {getProductVariants(item.productId).map(variant => (
                                 <option key={variant._id || variant.sku} value={variant._id || variant.sku}>
-                                  {variant.name} - PKR {variant.costPrice || variant.sellingPrice}
+                                  {variant.name} - PKR {variant.sellingPrice}
                                 </option>
                               ))}
                             </select>

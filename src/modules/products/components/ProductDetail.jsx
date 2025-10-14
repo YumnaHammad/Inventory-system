@@ -103,8 +103,8 @@ const ProductDetail = ({ productId, onClose }) => {
   const { text: overallStatusText, color: overallStatusColor, bgColor: overallStatusBgColor } = getStockStatus(overallStock);
 
   // Calculate profit margin
-  const profitMargin = product.costPrice > 0 ? 
-    ((product.sellingPrice - product.costPrice) / product.costPrice * 100).toFixed(2) : 0;
+  // const profitMargin = product.costPrice > 0 ? 
+  //   ((product.sellingPrice - product.costPrice) / product.costPrice * 100).toFixed(2) : 0;
 
   return (
     <motion.div
@@ -161,22 +161,22 @@ const ProductDetail = ({ productId, onClose }) => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Pricing</h3>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center">
+                  {/* <div className="flex justify-between items-center">
                     <span className="text-gray-600">Cost Price:</span>
                     <span className="font-medium text-red-600">PKR {product.costPrice}</span>
-                  </div>
+                  </div> */}
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Selling Price:</span>
                     <span className="font-medium text-green-600">PKR {product.sellingPrice}</span>
                   </div>
-                  <div className="flex justify-between items-center">
+                  {/* <div className="flex justify-between items-center">
                     <span className="text-gray-600">Profit Margin:</span>
                     <span className="font-medium text-blue-600">{profitMargin}%</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Profit per Unit:</span>
                     <span className="font-medium text-blue-600">PKR {product.sellingPrice - product.costPrice}</span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>

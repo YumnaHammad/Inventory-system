@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Truck, Plus, TrendingUp, DollarSign, Calendar, Clock, Filter, RefreshCw, CheckCircle, XCircle, Download, Package, RotateCcw, ArrowRight } from 'lucide-react';
+import { Truck, Plus, TrendingUp, DollarSign, Calendar, Clock, Filter, RefreshCw, CheckCircle, XCircle, Download, Package, RotateCcw, ArrowRight, X } from 'lucide-react';
 import CenteredLoader from '../components/CenteredLoader';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SalesFormPage from './forms/SalesFormPage';
@@ -18,6 +18,11 @@ const Sales = () => {
     totalReturns: 0,
     totalRevenue: 0
   });
+  
+  // Confirmation modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [confirmSale, setConfirmSale] = useState(null);
   const [timeFilter, setTimeFilter] = useState('all'); // all, day, week, month
   const [refreshing, setRefreshing] = useState(false);
   const location = useLocation();
@@ -315,6 +320,57 @@ const Sales = () => {
     return exportSales(getFilteredSales(), format);
   };
 
+  // Confirmation handlers
+  const showConfirmation = (sale, action) => {
+    setConfirmSale(sale);
+    setConfirmAction(action);
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirm = async () => {
+    if (!confirmAction || !confirmSale) return;
+
+    try {
+      if (confirmAction === 'returnReceived') {
+        // Handle return received logic
+        const loadingToast = toast.loading('Processing return...');
+        
+        const expectedReturnsRes = await api.get('/expected-returns');
+        const expectedReturn = expectedReturnsRes.data.expectedReturns?.find(
+          er => er.salesOrderId === confirmSale._id && er.status === 'pending'
+        );
+        
+        if (expectedReturn) {
+          await api.patch(`/expected-returns/${expectedReturn._id}/status`, {
+            status: 'received',
+            actualReturnDate: new Date().toISOString(),
+            notes: 'Return confirmed from sales page'
+          });
+          
+          toast.dismiss(loadingToast);
+          toast.success('Return received! Stock added back to warehouse ✅', {
+            duration: 5000
+          });
+          
+          fetchSales();
+        } else {
+          toast.dismiss(loadingToast);
+          toast.error('Expected return record not found. Please use Expected Returns page.');
+        }
+      } else {
+        // Handle regular status change
+        await handleStatusChange(confirmSale._id, confirmAction);
+      }
+    } catch (error) {
+      console.error('Error processing action:', error);
+      toast.error(error.response?.data?.error || 'Failed to process action');
+    } finally {
+      setShowConfirmModal(false);
+      setConfirmAction(null);
+      setConfirmSale(null);
+    }
+  };
+
   // Change sales status
   const handleStatusChange = async (saleId, newStatus) => {
     let loadingToast;
@@ -534,7 +590,7 @@ const Sales = () => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-5 md:space-y-6">
+    <div className="">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
         {/* Title Section - Full width on mobile */}
         <div className="w-full sm:w-auto">
@@ -708,7 +764,6 @@ const Sales = () => {
                         sale.status === 'returned' ? 'bg-red-100 text-red-800' :
                         sale.status === 'expected_return' ? 'bg-purple-100 text-purple-800' :
                         sale.status === 'dispatched' || sale.status === 'dispatch' ? 'bg-blue-100 text-blue-800' :
-                        sale.status === 'expected' ? 'bg-indigo-100 text-indigo-800' :
                         sale.status === 'confirmed' ? 'bg-cyan-100 text-cyan-800' :
                         sale.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
                         'bg-yellow-100 text-yellow-800'
@@ -772,25 +827,27 @@ const Sales = () => {
                     
                     {/* Action Buttons */}
                     <div className="flex flex-wrap gap-2 justify-end">
-                      {/* Delivery Note Button - Always available */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownloadDeliveryNote(sale);
-                        }}
-                        className="btn-ghost flex items-center text-xs px-2 py-1"
-                        title="Download Delivery Note"
-                      >
-                        <Download className="w-3 h-3 mr-1" />
-                        Delivery Note
-                      </button>
+                      {/* Return Button - For Expected Returns */}
+                      {sale.status === 'expected_return' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            showConfirmation(sale, 'returnReceived');
+                          }}
+                          className="bg-red-600 hover:bg-red-700 text-white flex items-center text-xs px-2 py-1 rounded transition-colors shadow-sm"
+                          title="Confirm that return has been received back to warehouse"
+                        >
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Return Received
+                        </button>
+                      )}
                       
                       {/* Status Change Buttons */}
                       {sale.status === 'pending' && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleStatusChange(sale._id, 'dispatch');
+                            showConfirmation(sale, 'dispatch');
                           }}
                           className="btn-primary flex items-center text-xs px-2 py-1"
                           title="Mark as Dispatched"
@@ -801,64 +858,25 @@ const Sales = () => {
                       )}
                       
                       {(sale.status === 'dispatch' || sale.status === 'dispatched') && (
-                        <>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(sale._id, 'expected');
-                            }}
-                            className="btn-secondary flex items-center text-xs px-2 py-1"
-                            title="Mark as Expected"
-                          >
-                            <Clock className="w-3 h-3 mr-1" />
-                            Expected
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(sale._id, 'delivered');
-                            }}
-                            className="btn-success flex items-center text-xs px-2 py-1"
-                            title="Mark as Delivered"
-                          >
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            Delivered
-                          </button>
-                        </>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            showConfirmation(sale, 'delivered');
+                          }}
+                          className="btn-success flex items-center text-xs px-2 py-1"
+                          title="Mark as Delivered"
+                        >
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Delivered
+                        </button>
                       )}
                       
-                      {sale.status === 'expected' && (
-                        <>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(sale._id, 'delivered');
-                            }}
-                            className="btn-success flex items-center text-xs px-2 py-1"
-                            title="Mark as Delivered"
-                          >
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            Delivered
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(sale._id, 'return');
-                            }}
-                            className="btn-danger flex items-center text-xs px-2 py-1"
-                            title="Mark as Returned"
-                          >
-                            <RotateCcw className="w-3 h-3 mr-1" />
-                            Return
-                          </button>
-                        </>
-                      )}
                       
                       {sale.status === 'delivered' && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleStatusChange(sale._id, 'expected_return');
+                            showConfirmation(sale, 'expected_return');
                           }}
                           className="bg-purple-600 hover:bg-purple-700 text-white flex items-center text-xs px-2 py-1 rounded transition-colors"
                           title="Mark as Expected Return - Product will appear in Expected Returns module"
@@ -866,6 +884,13 @@ const Sales = () => {
                           <Clock className="w-3 h-3 mr-1" />
                           Expected Return
                         </button>
+                      )}
+                      
+                      {sale.status === 'returned' && (
+                        <div className="flex items-center text-xs text-gray-500">
+                          <CheckCircle className="w-3 h-3 mr-1 text-green-600" />
+                          Return Completed
+                        </div>
                       )}
                     </div>
                   </div>
@@ -875,6 +900,59 @@ const Sales = () => {
           </div>
         )}
       </div>
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {confirmAction === 'dispatch' && 'Confirm Dispatch'}
+                {confirmAction === 'delivered' && 'Confirm Delivery'}
+                {confirmAction === 'expected_return' && 'Confirm Expected Return'}
+                {confirmAction === 'returnReceived' && 'Confirm Return Received'}
+              </h3>
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-gray-600 mb-4">
+                {confirmAction === 'dispatch' && `Are you sure you want to dispatch order ${confirmSale?.orderNumber}? This will release reserved stock.`}
+                {confirmAction === 'delivered' && `Are you sure you want to mark order ${confirmSale?.orderNumber} as delivered?`}
+                {confirmAction === 'expected_return' && `Are you sure you want to mark order ${confirmSale?.orderNumber} as expected return? This will add it to the Expected Returns module.`}
+                {confirmAction === 'returnReceived' && `Are you sure you want to confirm that the return for order ${confirmSale?.orderNumber} has been received back to warehouse?`}
+              </p>
+              
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowConfirmModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirm}
+                  className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 ${
+                    confirmAction === 'returnReceived' 
+                      ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
+                      : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+                  }`}
+                >
+                  {confirmAction === 'dispatch' && 'Dispatch Order'}
+                  {confirmAction === 'delivered' && 'Mark as Delivered'}
+                  {confirmAction === 'expected_return' && 'Mark as Expected Return'}
+                  {confirmAction === 'returnReceived' && 'Confirm Return'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

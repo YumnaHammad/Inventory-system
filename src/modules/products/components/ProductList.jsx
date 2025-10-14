@@ -347,10 +347,10 @@ const ProductList = () => {
                     </div>
                   ) : (
                     <>
-                  <div className="flex justify-between">
+                  {/* <div className="flex justify-between">
                     <span className="text-gray-600">Cost Price:</span>
                     <span className="font-medium">PKR {product.costPrice}</span>
-                  </div>
+                  </div> */}
                   <div className="flex justify-between">
                     <span className="text-gray-600">Selling Price:</span>
                     <span className="font-medium">PKR {product.sellingPrice}</span>
@@ -396,9 +396,9 @@ const ProductList = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Category
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Cost / Variants
-                  </th>
+                  </th> */}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Price / Variants
                   </th>
@@ -441,7 +441,7 @@ const ProductList = () => {
                           <span className="text-sm text-gray-900">{product.category}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      {/* <td className="px-6 py-4 whitespace-nowrap">
                         {product.hasVariants && product.variants && product.variants.length > 0 ? (
                           <div className="flex items-center">
                             <Grid3X3 className="h-4 w-4 text-blue-600 mr-2" />
@@ -453,7 +453,7 @@ const ProductList = () => {
                           <span className="text-sm font-medium text-gray-900">PKR {product.costPrice}</span>
                         </div>
                         )}
-                      </td>
+                      </td> */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         {product.hasVariants && product.variants && product.variants.length > 0 ? (
                           <div className="text-xs space-y-0.5">
@@ -663,10 +663,10 @@ const ProductList = () => {
                           <span className="text-gray-600">Category:</span>
                           <span className="ml-2 font-medium">{deleteModal.product.category}</span>
                         </div>
-                        <div>
+                        {/* <div>
                           <span className="text-gray-600">Cost Price:</span>
                           <span className="ml-2 font-medium">PKR {deleteModal.product.costPrice}</span>
-                        </div>
+                        </div> */}
                         <div>
                           <span className="text-gray-600">Selling Price:</span>
                           <span className="ml-2 font-medium">PKR {deleteModal.product.sellingPrice}</span>

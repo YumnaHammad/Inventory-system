@@ -15,7 +15,7 @@ const ProductForm = ({ product, onSubmit, onClose }) => {
     sku: '',
     category: '',
     unit: 'piece',
-    costPrice: '',
+    // costPrice: '', // Commented out
     sellingPrice: '',
     description: '',
     currentStock: 0
@@ -32,7 +32,7 @@ const ProductForm = ({ product, onSubmit, onClose }) => {
         sku: product.sku || '',
         category: product.category || '',
         unit: product.unit || 'piece',
-        costPrice: product.costPrice || '',
+        // costPrice: product.costPrice || '', // Commented out
         sellingPrice: product.sellingPrice || '',
         description: product.description || '',
         currentStock: product.currentStock || 0
@@ -67,8 +67,11 @@ const ProductForm = ({ product, onSubmit, onClose }) => {
         throw new Error('Please fill in all required fields');
       }
 
-      if (formData.costPrice <= 0 || formData.sellingPrice <= 0) {
-        throw new Error('Prices must be greater than 0');
+      // if (formData.costPrice <= 0 || formData.sellingPrice <= 0) {
+      //   throw new Error('Prices must be greater than 0');
+      // }
+      if (formData.sellingPrice <= 0) {
+        throw new Error('Selling price must be greater than 0');
       }
 
       await onSubmit(formData);
@@ -212,7 +215,7 @@ const ProductForm = ({ product, onSubmit, onClose }) => {
             </div>
 
             {/* Cost Price */}
-            <div>
+            {/* <div>
               <label htmlFor="costPrice" className="block text-sm font-medium text-gray-700 mb-2">
                 Cost Price (PKR) *
               </label>
@@ -228,7 +231,7 @@ const ProductForm = ({ product, onSubmit, onClose }) => {
                 value={formData.costPrice}
                 onChange={handleChange}
               />
-            </div>
+            </div> */}
 
             {/* Selling Price */}
             <div>

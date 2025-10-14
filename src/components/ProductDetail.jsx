@@ -219,10 +219,10 @@ const ProductDetail = ({ productId, onClose }) => {
                   </div>
                   {!product.hasVariants && (
                     <>
-                      <div className="flex justify-between">
+                      {/* <div className="flex justify-between">
                         <span className="text-gray-600">Cost Price:</span>
                         <span className="font-medium">PKR {product.costPrice}</span>
-                      </div>
+                      </div> */}
                       <div className="flex justify-between">
                         <span className="text-gray-600">Selling Price:</span>
                         <span className="font-medium">PKR {product.sellingPrice}</span>
@@ -330,10 +330,10 @@ const ProductDetail = ({ productId, onClose }) => {
 
                         {/* Prices */}
                         <div className="grid grid-cols-2 gap-3 pt-2 border-t border-blue-200">
-                          <div>
+                          {/* <div>
                             <p className="text-xs text-gray-600">Cost Price</p>
                             <p className="font-semibold text-gray-900">PKR {variant.costPrice}</p>
-                          </div>
+                          </div> */}
                           <div>
                             <p className="text-xs text-gray-600">Selling Price</p>
                             <p className="font-semibold text-green-600">PKR {variant.sellingPrice}</p>

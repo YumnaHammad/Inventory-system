@@ -20,7 +20,7 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
     sku: '',
     category: '',
     unit: 'pcs',
-    costPrice: '',
+    // costPrice: '',
     sellingPrice: '',
     description: '',
     hasVariants: false
@@ -46,7 +46,7 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
         sku: product.sku || '',
         category: product.category || '',
         unit: product.unit || 'pcs',
-        costPrice: product.costPrice || '',
+        // costPrice: product.costPrice || '',
         sellingPrice: product.sellingPrice || '',
         description: product.description || '',
         hasVariants: product.hasVariants || false
@@ -71,10 +71,34 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
   };
 
   const handleChange = (e) => {
+    const { name, value } = e.target;
+    
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
+    
+    // If SKU changes and we have variants, update variant SKUs
+    if (name === 'sku' && variants.length > 0) {
+      const updatedVariants = variants.map((variant, index) => {
+        // Extract attribute parts from variant name
+        const attributeParts = variant.attributes.map(attr => {
+          const cleanValue = attr.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+          return cleanValue.substring(0, 3);
+        }).join('-');
+        
+        const variantSKU = attributeParts 
+          ? `${value || 'PROD'}-${attributeParts}` 
+          : `${value || 'PROD'}-V${index + 1}`;
+        
+        return {
+          ...variant,
+          sku: variantSKU
+        };
+      });
+      
+      setVariants(updatedVariants);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -85,9 +109,9 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
     try {
       // Validate required fields
       const requiredFields = ['name', 'sku', 'category', 'sellingPrice'];
-      if (user?.role === 'admin') {
-        requiredFields.push('costPrice');
-      }
+      // if (user?.role === 'admin') {
+      //   requiredFields.push('costPrice');
+      // }
       
       for (const field of requiredFields) {
         if (!formData[field]) {
@@ -99,9 +123,9 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
         throw new Error('Selling price must be greater than 0');
       }
       
-      if (user?.role === 'admin' && formData.costPrice && parseFloat(formData.costPrice) <= 0) {
-        throw new Error('Cost price must be greater than 0');
-      }
+      // if (user?.role === 'admin' && formData.costPrice && parseFloat(formData.costPrice) <= 0) {
+      //   throw new Error('Cost price must be greater than 0');
+      // }
 
       // Include variants if they exist
       const submitData = {
@@ -133,10 +157,33 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
         productName: formData.name.trim()
       });
       
+      const newSKU = response.data.sku;
+      
       setFormData({
         ...formData,
-        sku: response.data.sku
+        sku: newSKU
       });
+      
+      // If we have variants, update their SKUs too
+      if (variants.length > 0) {
+        const updatedVariants = variants.map((variant, index) => {
+          const attributeParts = variant.attributes.map(attr => {
+            const cleanValue = attr.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+            return cleanValue.substring(0, 3);
+          }).join('-');
+          
+          const variantSKU = attributeParts 
+            ? `${newSKU}-${attributeParts}` 
+            : `${newSKU}-V${index + 1}`;
+          
+          return {
+            ...variant,
+            sku: variantSKU
+          };
+        });
+        
+        setVariants(updatedVariants);
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to generate SKU');
     } finally {
@@ -208,16 +255,28 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
       return newCombinations;
     }, []);
 
-    // Create variant objects
+    // Create variant objects with unique SKUs
     const newVariants = combinations.map((combination, index) => {
       const variantName = combination.map(c => c.value).join(' / ');
-      const variantSKU = `${formData.sku || 'PROD'}-${index + 1}`;
+      
+      // Generate variant SKU with attribute values
+      const attributeParts = combination.map(attr => {
+        // Take first 3 letters of each value and uppercase
+        const cleanValue = attr.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        return cleanValue.substring(0, 3);
+      }).join('-');
+      
+      // Create unique SKU: BASE-SKU-ATTR1-ATTR2 or BASE-SKU-V1, V2...
+      const baseSKU = formData.sku || 'PROD';
+      const variantSKU = attributeParts 
+        ? `${baseSKU}-${attributeParts}` 
+        : `${baseSKU}-V${index + 1}`;
       
       return {
         name: variantName,
         sku: variantSKU,
         attributes: combination,
-        costPrice: formData.costPrice || '',
+        // costPrice: formData.costPrice || '',
         sellingPrice: formData.sellingPrice || '',
         stock: 0
       };
@@ -352,7 +411,7 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
           </div>
 
           {/* Cost Price - Admin Only - Hidden when using variants */}
-          {!showVariants && user?.role === 'admin' && (
+          {/* {!showVariants && user?.role === 'admin' && (
             <div>
               <label htmlFor="costPrice" className="block text-sm font-medium text-gray-700 mb-3">
                 Cost Price (PKR) *
@@ -370,7 +429,7 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
                 onChange={handleChange}
               />
             </div>
-          )}
+          )} */}
 
           {/* Selling Price - Hidden when using variants */}
           {!showVariants && (
@@ -435,7 +494,7 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
             {showVariants && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-800">
-                  <strong>💡 Note:</strong> When using variants, prices (Cost & Selling) are set individually for each variant below. 
+                  <strong>💡 Note:</strong> When using variants, selling prices are set individually for each variant below. 
                   The base product price fields are hidden.
                 </p>
               </div>
@@ -533,9 +592,14 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
                     {variants.map((variant, index) => (
                       <div key={index} className="bg-white p-4 rounded-lg border border-gray-200">
                         <div className="flex items-start justify-between mb-3">
-                          <div>
+                          <div className="flex-1">
                             <h5 className="font-medium text-gray-900">{variant.name}</h5>
-                            <p className="text-xs text-gray-600 mt-1">SKU: {variant.sku}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className="text-xs text-gray-600">SKU:</p>
+                              <code className="text-xs font-mono px-2 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200">
+                                {variant.sku}
+                              </code>
+                            </div>
                           </div>
                           <button
                             type="button"
@@ -546,7 +610,7 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
                           </button>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                          {user?.role === 'admin' && (
+                          {/* {user?.role === 'admin' && (
                             <div>
                               <label className="text-xs text-gray-600">Cost Price (PKR)</label>
                               <input
@@ -558,7 +622,7 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
                                 placeholder="0.00"
                               />
                             </div>
-                          )}
+                          )} */}
                           <div>
                             <label className="text-xs text-gray-600">Selling Price (PKR)</label>
                             <input

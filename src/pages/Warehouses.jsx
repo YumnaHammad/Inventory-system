@@ -439,7 +439,11 @@ const Warehouses = () => {
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 bg-orange-100 rounded"></div>
-                <span className="text-gray-600">Reserved (Sold)</span>
+                <span className="text-gray-600">Reserved (Pending)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-red-100 rounded"></div>
+                <span className="text-gray-600">Delivered (Out)</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 bg-purple-100 rounded"></div>
@@ -461,13 +465,10 @@ const Warehouses = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Product
+                      Product / Variant
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       SKU
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <div className="flex items-center gap-1">
@@ -478,7 +479,13 @@ const Warehouses = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <div className="flex items-center gap-1">
                         Reserved
-                        <span className="text-gray-400" title="Items sold but not yet delivered">⚠️</span>
+                        <span className="text-gray-400" title="Items reserved for pending orders (not yet dispatched)">⚠️</span>
+                      </div>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <div className="flex items-center gap-1">
+                        Delivered
+                        <span className="text-gray-400" title="Items delivered to customers (out of warehouse)">🚚</span>
                       </div>
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -505,24 +512,40 @@ const Warehouses = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {selectedWarehouse.currentStock.map((stockItem, index) => (
+                  {selectedWarehouse.currentStock.map((stockItem, index) => {
+                    // Determine display name and SKU based on variant info
+                    const hasVariant = stockItem.variantDetails || stockItem.variantName;
+                    const displayName = hasVariant 
+                      ? `${stockItem.productId?.name || 'Unknown'} - ${stockItem.variantDetails?.name || stockItem.variantName}`
+                      : (stockItem.productId?.name || 'Unknown Product');
+                    const displaySKU = stockItem.variantDetails?.sku || stockItem.productId?.sku || 'N/A';
+                    
+                    // Get variant attributes for display
+                    const variantAttributes = stockItem.variantDetails?.attributes || [];
+                    
+                    return (
                     <motion.tr 
-                      key={stockItem.productId._id || index}
+                      key={`${stockItem.productId._id}-${stockItem.variantId || index}`}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
                       className="hover:bg-gray-50"
                     >
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">
                           {stockItem.productId?.name || 'Unknown Product'}
+                          {hasVariant && (
+                            <>
+                              {' • '}
+                              <span className="text-gray-700">
+                                {stockItem.variantDetails?.name || stockItem.variantName}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{stockItem.productId?.sku || 'N/A'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{stockItem.productId?.category || 'N/A'}</div>
+                        <div className="text-sm text-gray-600 font-mono">{displaySKU}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
@@ -535,7 +558,24 @@ const Warehouses = () => {
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                           <span className="text-sm font-bold text-orange-600">{stockItem.reservedQuantity || 0}</span>
-                          <span className="text-xs text-gray-500">sold</span>
+                          <span className="text-xs text-gray-500">pending</span>
+                        </div>
+                        {(stockItem.reservedQuantity || 0) === 0 && (
+                          <span className="text-xs text-green-600 italic">✓ None reserved</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            <span className="text-sm font-bold text-red-600">{stockItem.deliveredQuantity || 0}</span>
+                            <span className="text-xs text-gray-500">out</span>
+                          </div>
+                          {(stockItem.deliveredQuantity || 0) > 0 && (
+                            <span className="text-xs text-red-600 italic">
+                              Delivered to customer
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -565,7 +605,7 @@ const Warehouses = () => {
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                           <span className="text-sm font-bold text-green-600">
-                            {(stockItem.quantity || 0) - (stockItem.reservedQuantity || 0)}
+                            {(stockItem.quantity || 0) - (stockItem.reservedQuantity || 0) - (stockItem.deliveredQuantity || 0)}
                           </span>
                           <span className="text-xs text-gray-500">ready</span>
                         </div>
@@ -597,7 +637,8 @@ const Warehouses = () => {
                         </div>
                       </td>
                     </motion.tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
