@@ -15,7 +15,8 @@ import {
   Crown,
   Building2,
   UserCheck,
-  X
+  X,
+  MapPin
 } from 'lucide-react';
 
 const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
@@ -46,6 +47,7 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
         { name: 'Purchases', href: '/purchases', icon: ShoppingCart },
         { name: 'Sales', href: '/sales', icon: Truck },
         { name: 'Reports', href: '/reports', icon: BarChart3 },
+        { name: 'City Reports', href: '/city-reports', icon: MapPin },
         { name: 'Advanced Reports', href: '/reports/advanced', icon: TrendingUp }
       );
     }
@@ -55,6 +57,7 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
         { name: 'My Tasks', href: '/tasks', icon: Activity },
         { name: 'Inventory', href: '/inventory', icon: Package },
         { name: 'Reports', href: '/reports', icon: BarChart3 },
+        { name: 'City Reports', href: '/city-reports', icon: MapPin },
         { name: 'Advanced Reports', href: '/reports/advanced', icon: TrendingUp }
       );
     }

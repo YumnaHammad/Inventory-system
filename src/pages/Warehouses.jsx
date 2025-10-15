@@ -512,20 +512,52 @@ const Warehouses = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {selectedWarehouse.currentStock.map((stockItem, index) => {
-                    // Determine display name and SKU based on variant info
-                    const hasVariant = stockItem.variantDetails || stockItem.variantName;
-                    const displayName = hasVariant 
-                      ? `${stockItem.productId?.name || 'Unknown'} - ${stockItem.variantDetails?.name || stockItem.variantName}`
-                      : (stockItem.productId?.name || 'Unknown Product');
-                    const displaySKU = stockItem.variantDetails?.sku || stockItem.productId?.sku || 'N/A';
+                  {(() => {
+                    // Merge duplicate product/variant entries by product name + variant name
+                    const mergedStock = {};
                     
-                    // Get variant attributes for display
-                    const variantAttributes = stockItem.variantDetails?.attributes || [];
+                    selectedWarehouse.currentStock.forEach(stockItem => {
+                      // Create a key based on product name and variant name for proper merging
+                      const productName = stockItem.productId?.name || 'Unknown Product';
+                      const variantName = stockItem.variantDetails?.name || stockItem.variantName || 'no-variant';
+                      const key = `${productName}-${variantName}`;
+                      
+                      if (!mergedStock[key]) {
+                        mergedStock[key] = {
+                          ...stockItem,
+                          quantity: 0,
+                          reservedQuantity: 0,
+                          deliveredQuantity: 0,
+                          expectedReturns: 0,
+                          returnedQuantity: 0,
+                          // Store the display names for consistent display
+                          displayProductName: productName,
+                          displayVariantName: variantName,
+                          displaySKU: stockItem.variantDetails?.sku || stockItem.productId?.sku || 'N/A'
+                        };
+                      }
+                      
+                      // Sum up quantities
+                      mergedStock[key].quantity += (stockItem.quantity || 0);
+                      mergedStock[key].reservedQuantity += (stockItem.reservedQuantity || 0);
+                      mergedStock[key].deliveredQuantity += (stockItem.deliveredQuantity || 0);
+                      mergedStock[key].expectedReturns += (stockItem.expectedReturns || 0);
+                      mergedStock[key].returnedQuantity += (stockItem.returnedQuantity || 0);
+                    });
                     
-                    return (
+                    return Object.values(mergedStock).map((stockItem, index) => {
+                      // Use the stored display names for consistent display
+                      const displayName = stockItem.displayVariantName !== 'no-variant' 
+                        ? `${stockItem.displayProductName} / ${stockItem.displayVariantName}`
+                        : stockItem.displayProductName;
+                      const displaySKU = stockItem.displaySKU;
+                      
+                      // Get variant attributes for display (use from first item if available)
+                      const variantAttributes = stockItem.variantDetails?.attributes || [];
+                      
+                      return (
                     <motion.tr 
-                      key={`${stockItem.productId._id}-${stockItem.variantId || index}`}
+                      key={`${displayName}-${displaySKU}-${index}`}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
@@ -533,15 +565,7 @@ const Warehouses = () => {
                     >
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">
-                          {stockItem.productId?.name || 'Unknown Product'}
-                          {hasVariant && (
-                            <>
-                              {' • '}
-                              <span className="text-gray-700">
-                                {stockItem.variantDetails?.name || stockItem.variantName}
-                              </span>
-                            </>
-                          )}
+                          {displayName}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -605,7 +629,7 @@ const Warehouses = () => {
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                           <span className="text-sm font-bold text-green-600">
-                            {(stockItem.quantity || 0) - (stockItem.reservedQuantity || 0)}
+                            {(stockItem.quantity || 0) - (stockItem.reservedQuantity || 0) - (stockItem.deliveredQuantity || 0)}
                           </span>
                           <span className="text-xs text-gray-500">ready</span>
                         </div>
@@ -637,9 +661,10 @@ const Warehouses = () => {
                         </div>
                       </td>
                     </motion.tr>
-                    );
-                  })}
-                </tbody>
+                      );
+                    });
+                  })()}
+              </tbody>
               </table>
             </div>
           ) : (

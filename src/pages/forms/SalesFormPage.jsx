@@ -52,23 +52,33 @@ const SalesFormPage = ({ onSuccess }) => {
       
       // Track which product+variant combinations have stock
       const variantStockMap = new Map(); // Key: "productId-variantId", Value: available quantity
+      const variantStockByNameMap = new Map(); // Key: "productName-variantName", Value: available quantity
       
       warehouses.forEach(warehouse => {
         if (warehouse.currentStock && Array.isArray(warehouse.currentStock)) {
           warehouse.currentStock.forEach(stockItem => {
             const totalStock = (stockItem.quantity || 0);
             const reserved = (stockItem.reservedQuantity || 0);
-            const available = totalStock - reserved;
+            const delivered = (stockItem.deliveredQuantity || 0);
+            const available = totalStock - reserved - delivered;
             
             // Only include items that have available stock
             if (available > 0) {
               const productId = stockItem.productId?._id || stockItem.productId;
               const variantId = stockItem.variantId || 'no-variant';
+              const productName = stockItem.productId?.name || 'Unknown Product';
+              const variantName = stockItem.variantDetails?.name || stockItem.variantName || 'no-variant';
               
               if (productId) {
-                const key = `${productId}-${variantId}`;
-                const currentStock = variantStockMap.get(key) || 0;
-                variantStockMap.set(key, currentStock + available);
+                // Keep both key formats for compatibility
+                const idKey = `${productId}-${variantId}`;
+                const nameKey = `${productName}-${variantName}`;
+                
+                const currentStockById = variantStockMap.get(idKey) || 0;
+                variantStockMap.set(idKey, currentStockById + available);
+                
+                const currentStockByName = variantStockByNameMap.get(nameKey) || 0;
+                variantStockByNameMap.set(nameKey, currentStockByName + available);
               }
             }
           });
@@ -226,8 +236,8 @@ const SalesFormPage = ({ onSuccess }) => {
       items: updatedItems
     }));
 
-    // Check stock availability when product or quantity changes
-    if ((field === 'productId' || field === 'quantity') && value) {
+    // Check stock availability when product, variant, or quantity changes
+    if ((field === 'productId' || field === 'variantId' || field === 'quantity') && value) {
       await checkStockAvailability(updatedItems[index]);
     }
   };
@@ -236,19 +246,45 @@ const SalesFormPage = ({ onSuccess }) => {
     if (!item.productId || !item.quantity) return;
 
     try {
-      const response = await api.get('/stock/levels', {
-        params: { productId: item.productId }
-      });
+      // Use the same logic as fetchProducts to get combined stock
+      const warehousesResponse = await api.get('/warehouses');
+      const warehouses = warehousesResponse.data || [];
       
-      const stockData = response.data;
-      const totalAvailableStock = stockData.reduce((sum, warehouse) => {
-        const productStock = warehouse.products.find(p => p.productId === item.productId);
-        return sum + (productStock ? productStock.availableStock : 0);
-      }, 0);
+      let totalAvailableStock = 0;
+      const variantId = item.variantId || 'no-variant';
+      
+      // Get product and variant names for name-based matching
+      const product = products.find(p => p._id === item.productId);
+      const productName = product?.name || 'Unknown Product';
+      const variant = product?.variants?.find(v => (v._id || v.sku) === variantId);
+      const variantName = variant?.name || 'no-variant';
+      
+      warehouses.forEach(warehouse => {
+        if (warehouse.currentStock && Array.isArray(warehouse.currentStock)) {
+          warehouse.currentStock.forEach(stockItem => {
+            const stockProductId = stockItem.productId?._id || stockItem.productId;
+            const stockVariantId = stockItem.variantId || 'no-variant';
+            const stockProductName = stockItem.productId?.name || 'Unknown Product';
+            const stockVariantName = stockItem.variantDetails?.name || stockItem.variantName || 'no-variant';
+            
+            // Match by both ID and name for better accuracy
+            const idMatch = stockProductId === item.productId && stockVariantId === variantId;
+            const nameMatch = stockProductName === productName && stockVariantName === variantName;
+            
+            if (idMatch || nameMatch) {
+              const totalStock = (stockItem.quantity || 0);
+              const reserved = (stockItem.reservedQuantity || 0);
+              const delivered = (stockItem.deliveredQuantity || 0);
+              const available = totalStock - reserved - delivered;
+              totalAvailableStock += Math.max(0, available);
+            }
+          });
+        }
+      });
 
       setStockChecks(prev => ({
         ...prev,
-        [item.productId]: {
+        [`${item.productId}-${variantId}`]: {
           available: totalAvailableStock,
           required: item.quantity,
           sufficient: totalAvailableStock >= item.quantity
@@ -309,7 +345,8 @@ const SalesFormPage = ({ onSuccess }) => {
       }
 
       // Check stock availability
-      const stockCheck = stockChecks[item.productId];
+      const variantId = item.variantId || 'no-variant';
+      const stockCheck = stockChecks[`${item.productId}-${variantId}`];
       if (stockCheck && !stockCheck.sufficient) {
         errors[`item_${index}_stock`] = `Insufficient stock. Available: ${stockCheck.available}, Required: ${stockCheck.required}`;
       }
@@ -480,6 +517,28 @@ const SalesFormPage = ({ onSuccess }) => {
                   <p className="mt-1 text-sm text-red-600 flex items-center">
                     <AlertCircle className="w-4 h-4 mr-1" />
                     {validationErrors['customerInfo.phone']}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  City *
+                </label>
+                <input
+                  type="text"
+                  name="customerInfo.address.city"
+                  value={formData.customerInfo.address.city}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                    validationErrors['customerInfo.address.city'] ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter customer city"
+                />
+                {validationErrors['customerInfo.address.city'] && (
+                  <p className="mt-1 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="w-4 h-4 mr-1" />
+                    {validationErrors['customerInfo.address.city']}
                   </p>
                 )}
               </div>
@@ -706,21 +765,25 @@ const SalesFormPage = ({ onSuccess }) => {
                             {validationErrors[`item_${index}_quantity`]}
                           </p>
                         )}
-                        {stockChecks[item.productId] && (
-                          <div className="mt-1">
-                            {stockChecks[item.productId].sufficient ? (
-                              <p className="text-sm text-green-600 flex items-center">
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                                Stock available: {stockChecks[item.productId].available}
-                              </p>
-                            ) : (
-                              <p className="text-sm text-red-600 flex items-center">
-                                <AlertCircle className="w-3 h-3 mr-1" />
-                                Low stock: {stockChecks[item.productId].available} available
-                              </p>
-                )}
-              </div>
-                        )}
+                        {(() => {
+                          const variantId = item.variantId || 'no-variant';
+                          const stockCheck = stockChecks[`${item.productId}-${variantId}`];
+                          return stockCheck && (
+                            <div className="mt-1">
+                              {stockCheck.sufficient ? (
+                                <p className="text-sm text-green-600 flex items-center">
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Stock available: {stockCheck.available}
+                                </p>
+                              ) : (
+                                <p className="text-sm text-red-600 flex items-center">
+                                  <AlertCircle className="w-3 h-3 mr-1" />
+                                  Low stock: {stockCheck.available} available
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })()}
             </div>
 
                       <div>

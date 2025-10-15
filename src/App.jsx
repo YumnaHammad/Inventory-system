@@ -26,6 +26,7 @@ import AdvancedUserManagement from './pages/AdvancedUserManagement';
 import AdvancedReports from './pages/AdvancedReports';
 import Suppliers from './pages/Suppliers';
 import ExpectedReturns from './pages/ExpectedReturns';
+import CityReports from './pages/CityReports';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -81,6 +82,7 @@ function AppRoutes() {
         
         {/* Reports */}
         <Route path="reports" element={<Reports />} />
+        <Route path="city-reports" element={<CityReports />} />
         <Route path="reports/advanced" element={<AdvancedReports />} />
         
         {/* User Management */}
