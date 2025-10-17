@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Plus, Package, DollarSign, Calendar, Clock, Filter, RefreshCw, FileText, Receipt, CheckCircle, AlertCircle } from 'lucide-react';
+import { ShoppingCart, Plus, Package, DollarSign, Calendar, Clock, Filter, RefreshCw, FileText, Receipt, CheckCircle, AlertCircle, Grid3X3, List } from 'lucide-react';
 import CenteredLoader from '../components/CenteredLoader';
 import { useLocation, useNavigate } from 'react-router-dom';
 import PurchaseFormPage from './forms/PurchaseFormPage';
@@ -22,6 +22,7 @@ const Purchases = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [viewMode, setViewMode] = useState('list'); // 'grid' or 'list'
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -414,6 +415,34 @@ const Purchases = () => {
           <p className="text-sm sm:text-base text-gray-600 truncate">Manage your purchase orders and suppliers</p>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+          {/* View Toggle */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex items-center px-3 py-1.5 rounded-md transition-all duration-200 ${
+                viewMode === 'grid'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title="Grid View"
+            >
+              <Grid3X3 className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline text-sm font-medium">Grid</span>
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex items-center px-3 py-1.5 rounded-md transition-all duration-200 ${
+                viewMode === 'list'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title="List View"
+            >
+              <List className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline text-sm font-medium">List</span>
+            </button>
+          </div>
+          
           <button 
             onClick={handleRefresh}
             disabled={refreshing}
@@ -538,7 +567,7 @@ const Purchases = () => {
           </div>
         ) : (
           <>
-            <div className="space-y-3 sm:space-y-4">
+            <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6' : 'space-y-3 sm:space-y-4'}>
               {currentPurchases.map((purchase) => (
               <motion.div
                 key={purchase._id}
@@ -550,7 +579,7 @@ const Purchases = () => {
                     : 'border-gray-200'
                 }`}
               >
-                <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-3">
+                <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-3 sm:gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -673,11 +702,11 @@ const Purchases = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="lg:text-right border-t lg:border-t-0 lg:border-l border-gray-200 pt-2 lg:pt-0 lg:pl-3">
+                  <div className="lg:text-right border-t lg:border-t-0 lg:border-l border-gray-200 pt-3 lg:pt-0 lg:pl-4 min-w-0 flex-shrink-0">
                     <div className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">
                       <span className="font-medium">Supplier:</span> {purchase.supplierId?.name || 'Unknown'}
                     </div>
-                    <div className="text-xs text-gray-400">
+                    <div className="text-xs text-gray-400 mb-2">
                       {purchase.receivedDate ? `Received: ${new Date(purchase.receivedDate).toLocaleDateString()}` : 'Not received yet'}
                     </div>
                   </div>

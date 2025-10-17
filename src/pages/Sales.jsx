@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Truck, Plus, TrendingUp, DollarSign, Calendar, Clock, Filter, RefreshCw, CheckCircle, XCircle, Download, Package, RotateCcw, ArrowRight, X } from 'lucide-react';
+import { Truck, Plus, TrendingUp, DollarSign, Calendar, Clock, Filter, RefreshCw, CheckCircle, XCircle, Download, Package, RotateCcw, ArrowRight, X, Grid3X3, List } from 'lucide-react';
 import CenteredLoader from '../components/CenteredLoader';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SalesFormPage from './forms/SalesFormPage';
@@ -25,6 +25,9 @@ const Sales = () => {
   const [confirmSale, setConfirmSale] = useState(null);
   const [timeFilter, setTimeFilter] = useState('all'); // all, day, week, month
   const [refreshing, setRefreshing] = useState(false);
+  const [viewMode, setViewMode] = useState('list'); // 'grid' or 'list'
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -304,6 +307,18 @@ const Sales = () => {
     return sales.filter(sale => new Date(sale.createdAt) >= filterDate);
   };
 
+  // Pagination logic
+  const filteredSales = getFilteredSales();
+  const totalPages = Math.ceil(filteredSales.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentSales = filteredSales.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [timeFilter]);
+
   // Handle filter change
   const handleFilterChange = (newFilter) => {
     setTimeFilter(newFilter);
@@ -317,7 +332,7 @@ const Sales = () => {
   // Export sales data
   const handleExportSales = async (format = 'excel') => {
     const { exportSales } = await import('../utils/exportUtils');
-    return exportSales(getFilteredSales(), format);
+    return exportSales(filteredSales, format);
   };
 
   // Confirmation handlers
@@ -596,6 +611,34 @@ const Sales = () => {
         
         {/* Controls Section - Full width on mobile */}
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+          {/* View Toggle */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex items-center px-3 py-1.5 rounded-md transition-all duration-200 ${
+                viewMode === 'grid'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title="Grid View"
+            >
+              <Grid3X3 className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline text-sm font-medium">Grid</span>
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex items-center px-3 py-1.5 rounded-md transition-all duration-200 ${
+                viewMode === 'list'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title="List View"
+            >
+              <List className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline text-sm font-medium">List</span>
+            </button>
+          </div>
+          
           <button 
             onClick={handleRefresh}
             disabled={refreshing}
@@ -606,7 +649,7 @@ const Sales = () => {
             <span className="hidden sm:inline">Refresh</span>
           </button>
           <ExportButton
-            data={getFilteredSales()}
+            data={filteredSales}
             filename="sales"
             title="Sales Report"
             exportFunction={handleExportSales}
@@ -698,7 +741,7 @@ const Sales = () => {
       <div className="card p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-lg font-semibold text-gray-900">
-            Sales Records ({getFilteredSales().length} of {sales.length} total)
+            Sales Records ({filteredSales.length} of {sales.length} total)
           </h2>
           <div className="flex items-center space-x-3">
             <select
@@ -724,7 +767,7 @@ const Sales = () => {
           </div>
         </div>
 
-        {getFilteredSales().length === 0 ? (
+        {filteredSales.length === 0 ? (
           <div className="text-center py-8">
             <Truck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500 text-lg">No sales found</p>
@@ -739,21 +782,22 @@ const Sales = () => {
             </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            {getFilteredSales().map((sale) => (
+          <>
+            <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6' : 'space-y-3 sm:space-y-4'}>
+              {currentSales.map((sale) => (
               <motion.div
                 key={sale._id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`border rounded-lg p-4 hover:shadow-md transition-all duration-300 ${
+                className={`border rounded-lg p-3 sm:p-4 hover:shadow-md transition-all duration-300 ${
                   newlyAddedSaleId === sale._id 
                     ? 'border-green-500 bg-green-50 shadow-lg ring-2 ring-green-200' 
                     : 'border-gray-200'
                 }`}
               >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 sm:gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
                       <span className="font-semibold text-gray-900">{sale.orderNumber}</span>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         sale.status === 'delivered' ? 'bg-green-100 text-green-800' :
@@ -767,29 +811,29 @@ const Sales = () => {
                         {sale.status === 'expected_return' ? 'Expected Return' : sale.status}
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 text-xs sm:text-sm text-gray-600">
                       <div className="flex items-center">
-                        <Calendar className="w-4 h-4 mr-2" />
-                        <span>{new Date(sale.createdAt).toLocaleDateString()}</span>
+                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+                        <span className="truncate">{new Date(sale.createdAt).toLocaleDateString()}</span>
                       </div>
                       <div className="flex items-center">
-                        <Truck className="w-4 h-4 mr-2" />
-                        <span>{sale.items?.length || 0} items</span>
+                        <Truck className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+                        <span className="truncate">{sale.items?.length || 0} items</span>
                       </div>
                       <div className="flex items-center">
-                        <DollarSign className="w-4 h-4 mr-2" />
-                        <span className="font-medium">PKR {sale.totalAmount?.toLocaleString()}</span>
+                        <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0" />
+                        <span className="font-medium truncate">PKR {sale.totalAmount?.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center">
-                        {sale.status === 'delivered' ? <CheckCircle className="w-4 h-4 mr-2 text-green-600" /> :
-                         sale.status === 'returned' ? <XCircle className="w-4 h-4 mr-2 text-red-600" /> :
-                         <Clock className="w-4 h-4 mr-2 text-yellow-600" />}
-                        <span className="capitalize">{sale.status}</span>
+                        {sale.status === 'delivered' ? <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 text-green-600 flex-shrink-0" /> :
+                         sale.status === 'returned' ? <XCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 text-red-600 flex-shrink-0" /> :
+                         <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 text-yellow-600 flex-shrink-0" />}
+                        <span className="capitalize truncate">{sale.status}</span>
                       </div>
                     </div>
-                    <div className="mt-3">
-                      <p className="text-sm text-gray-500 mb-2">Items:</p>
-                      <div className="flex flex-wrap gap-2">
+                    <div className="mt-2 sm:mt-3">
+                      <p className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">Items:</p>
+                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
                         {sale.items?.slice(0, 3).map((item, index) => {
                           const productName = item.productId?.name || 'Unknown Product';
                           const variantName = item.variantName ? ` - ${item.variantName}` : '';
@@ -798,7 +842,7 @@ const Sales = () => {
                           return (
                             <span
                               key={index}
-                              className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs"
+                              className="px-2 py-0.5 sm:py-1 bg-green-100 text-green-800 rounded-full text-xs truncate max-w-[200px]"
                               title={`${displayName} (x${item.quantity})`}
                             >
                               {displayName} (x{item.quantity})
@@ -806,23 +850,23 @@ const Sales = () => {
                           );
                         })}
                         {sale.items?.length > 3 && (
-                          <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+                          <span className="px-2 py-0.5 sm:py-1 bg-gray-100 text-gray-600 rounded-full text-xs whitespace-nowrap">
                             +{sale.items.length - 3} more
                           </span>
                         )}
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm text-gray-500 mb-2">
+                  <div className="text-right min-w-0 flex-shrink-0 sm:ml-4 mt-3 sm:mt-0">
+                    <div className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">
                       Customer: {sale.customerId?.name || sale.customerName || 'Unknown'}
                     </div>
-                    <div className="text-xs text-gray-400 mb-3">
+                    <div className="text-xs text-gray-400 mb-2 sm:mb-4">
                       {sale.deliveryDate ? `Delivered: ${new Date(sale.deliveryDate).toLocaleDateString()}` : 'Not delivered yet'}
                     </div>
                     
                     {/* Action Buttons */}
-                    <div className="flex flex-wrap gap-2 justify-end">
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-end">
                       {/* Return Button - For Expected Returns */}
                       {sale.status === 'expected_return' && (
                         <button
@@ -830,7 +874,7 @@ const Sales = () => {
                             e.stopPropagation();
                             showConfirmation(sale, 'returnReceived');
                           }}
-                          className="bg-red-600 hover:bg-red-700 text-white flex items-center text-xs px-2 py-1 rounded transition-colors shadow-sm"
+                          className="bg-red-600 hover:bg-red-700 text-white flex items-center text-xs px-2 py-1 rounded transition-colors shadow-sm whitespace-nowrap"
                           title="Confirm that return has been received back to warehouse"
                         >
                           <CheckCircle className="w-3 h-3 mr-1" />
@@ -845,7 +889,7 @@ const Sales = () => {
                             e.stopPropagation();
                             showConfirmation(sale, 'dispatch');
                           }}
-                          className="btn-primary flex items-center text-xs px-2 py-1"
+                          className="btn-primary flex items-center text-xs px-2 py-1 whitespace-nowrap"
                           title="Mark as Dispatched"
                         >
                           <Truck className="w-3 h-3 mr-1" />
@@ -859,7 +903,7 @@ const Sales = () => {
                             e.stopPropagation();
                             showConfirmation(sale, 'delivered');
                           }}
-                          className="btn-success flex items-center text-xs px-2 py-1"
+                          className="btn-success flex items-center text-xs px-2 py-1 whitespace-nowrap"
                           title="Mark as Delivered"
                         >
                           <CheckCircle className="w-3 h-3 mr-1" />
@@ -893,7 +937,88 @@ const Sales = () => {
                 </div>
               </motion.div>
             ))}
-          </div>
+            </div>
+          </>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && filteredSales.length > 0 && (
+            <div className="mt-6 flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-lg">
+              <div className="flex flex-1 justify-between sm:hidden">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+              <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{' '}
+                    <span className="font-medium">{Math.min(indexOfLastItem, filteredSales.length)}</span> of{' '}
+                    <span className="font-medium">{filteredSales.length}</span> results
+                  </p>
+                </div>
+                <div>
+                  <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Previous</span>
+                      <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                    {[...Array(totalPages)].map((_, index) => {
+                      const pageNumber = index + 1;
+                      if (
+                        pageNumber === 1 ||
+                        pageNumber === totalPages ||
+                        (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                      ) {
+                        return (
+                          <button
+                            key={pageNumber}
+                            onClick={() => setCurrentPage(pageNumber)}
+                            className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                              currentPage === pageNumber
+                                ? 'z-10 bg-blue-600 text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+                                : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
+                            }`}
+                          >
+                            {pageNumber}
+                          </button>
+                        );
+                      } else if (pageNumber === currentPage - 2 || pageNumber === currentPage + 2) {
+                        return <span key={pageNumber} className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300">...</span>;
+                      }
+                      return null;
+                    })}
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Next</span>
+                      <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </nav>
+                </div>
+              </div>
+            </div>
         )}
       </div>
 

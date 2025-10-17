@@ -284,47 +284,106 @@ export const exportUsers = (users, format = 'excel') => {
     'First Name': user.firstName || 'Unknown',
     'Last Name': user.lastName || 'User',
     'Email': user.email || 'No email',
+    'Phone': user.phone || 'N/A',
     'Role': user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'Employee',
+    'Department': user.department || 'N/A',
+    'Position': user.position || 'N/A',
     'Status': user.isActive ? 'Active' : 'Inactive',
-    'Created Date': user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown',
-    'Last Login': user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'
+    'Last Login': user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never',
+    'Created Date': user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Unknown'
   }));
   
   return exportData(userData, format, 'users', 'User Management Report', [
     { header: 'First Name', key: 'First Name' },
     { header: 'Last Name', key: 'Last Name' },
     { header: 'Email', key: 'Email' },
+    { header: 'Phone', key: 'Phone' },
     { header: 'Role', key: 'Role' },
+    { header: 'Department', key: 'Department' },
+    { header: 'Position', key: 'Position' },
     { header: 'Status', key: 'Status' },
-    { header: 'Created Date', key: 'Created Date' },
-    { header: 'Last Login', key: 'Last Login' }
+    { header: 'Last Login', key: 'Last Login' },
+    { header: 'Created Date', key: 'Created Date' }
   ]);
 };
 
 // Sales-specific export functions
 export const exportSales = (sales, format = 'excel') => {
-  const salesData = sales.map(sale => ({
-    'Order Number': sale.orderNumber || 'N/A',
-    'Customer': sale.customerName || 'Unknown',
-    'Product': sale.productName || 'Unknown',
-    'Quantity': sale.quantity || 0,
-    'Unit Price': sale.unitPrice || 0,
-    'Total Amount': sale.totalAmount || 0,
-    'Status': sale.status ? sale.status.charAt(0).toUpperCase() + sale.status.slice(1) : 'Pending',
-    'Order Date': sale.orderDate ? new Date(sale.orderDate).toLocaleDateString() : 'Unknown',
-    'Delivery Date': sale.deliveryDate ? new Date(sale.deliveryDate).toLocaleDateString() : 'Not delivered'
-  }));
+  const salesData = sales.flatMap(sale => {
+    // If sale has items array, create a row for each item
+    if (sale.items && Array.isArray(sale.items)) {
+      return sale.items.map(item => ({
+        'Order Number': sale.orderNumber || 'N/A',
+        'Customer Name': sale.customerInfo?.name || 'Unknown',
+        'Customer Email': sale.customerInfo?.email || 'N/A',
+        'Customer Phone': sale.customerInfo?.phone || 'N/A',
+        'Product Name': item.productId?.name || 'Unknown',
+        'Product SKU': item.productId?.sku || 'N/A',
+        'Variant Name': item.variantName || 'N/A',
+        'Quantity': item.quantity || 0,
+        'Unit Price': item.unitPrice || 0,
+        'Item Total': item.totalPrice || 0,
+        'Order Total': sale.totalAmount || 0,
+        'Status': sale.status ? sale.status.charAt(0).toUpperCase() + sale.status.slice(1) : 'Pending',
+        'Payment Status': sale.paymentStatus ? sale.paymentStatus.charAt(0).toUpperCase() + sale.paymentStatus.slice(1) : 'Pending',
+        'Order Date': sale.orderDate ? new Date(sale.orderDate).toLocaleDateString() : 'Unknown',
+        'Expected Delivery': sale.expectedDeliveryDate ? new Date(sale.expectedDeliveryDate).toLocaleDateString() : 'Not set',
+        'Actual Delivery': sale.actualDeliveryDate ? new Date(sale.actualDeliveryDate).toLocaleDateString() : 'Not delivered',
+        'Delivery Address': sale.deliveryAddress ? 
+          `${sale.deliveryAddress.street || ''}, ${sale.deliveryAddress.city || ''}, ${sale.deliveryAddress.state || ''}, ${sale.deliveryAddress.country || ''}`.replace(/,\s*,/g, ',').replace(/^,\s*|,\s*$/g, '') : 'N/A',
+        'Notes': sale.notes || 'N/A',
+        'Created By': sale.createdBy?.firstName ? `${sale.createdBy.firstName} ${sale.createdBy.lastName}` : 'Unknown',
+        'Created Date': sale.createdAt ? new Date(sale.createdAt).toLocaleDateString() : 'Unknown'
+      }));
+    } else {
+      // Fallback for single item sales (legacy format)
+      return {
+        'Order Number': sale.orderNumber || 'N/A',
+        'Customer Name': sale.customerInfo?.name || sale.customerName || 'Unknown',
+        'Customer Email': sale.customerInfo?.email || 'N/A',
+        'Customer Phone': sale.customerInfo?.phone || 'N/A',
+        'Product Name': sale.productName || 'Unknown',
+        'Product SKU': sale.productSKU || 'N/A',
+        'Variant Name': sale.variantName || 'N/A',
+        'Quantity': sale.quantity || 0,
+        'Unit Price': sale.unitPrice || 0,
+        'Item Total': sale.totalAmount || 0,
+        'Order Total': sale.totalAmount || 0,
+        'Status': sale.status ? sale.status.charAt(0).toUpperCase() + sale.status.slice(1) : 'Pending',
+        'Payment Status': sale.paymentStatus ? sale.paymentStatus.charAt(0).toUpperCase() + sale.paymentStatus.slice(1) : 'Pending',
+        'Order Date': sale.orderDate ? new Date(sale.orderDate).toLocaleDateString() : 'Unknown',
+        'Expected Delivery': sale.expectedDeliveryDate ? new Date(sale.expectedDeliveryDate).toLocaleDateString() : 'Not set',
+        'Actual Delivery': sale.actualDeliveryDate ? new Date(sale.actualDeliveryDate).toLocaleDateString() : 'Not delivered',
+        'Delivery Address': sale.deliveryAddress ? 
+          `${sale.deliveryAddress.street || ''}, ${sale.deliveryAddress.city || ''}, ${sale.deliveryAddress.state || ''}, ${sale.deliveryAddress.country || ''}`.replace(/,\s*,/g, ',').replace(/^,\s*|,\s*$/g, '') : 'N/A',
+        'Notes': sale.notes || 'N/A',
+        'Created By': sale.createdBy?.firstName ? `${sale.createdBy.firstName} ${sale.createdBy.lastName}` : 'Unknown',
+        'Created Date': sale.createdAt ? new Date(sale.createdAt).toLocaleDateString() : 'Unknown'
+      };
+    }
+  });
   
-  return exportData(salesData, format, 'sales', 'Sales Report', [
+  return exportData(salesData, format, 'sales', 'Sales Orders Report', [
     { header: 'Order Number', key: 'Order Number' },
-    { header: 'Customer', key: 'Customer' },
-    { header: 'Product', key: 'Product' },
+    { header: 'Customer Name', key: 'Customer Name' },
+    { header: 'Customer Email', key: 'Customer Email' },
+    { header: 'Customer Phone', key: 'Customer Phone' },
+    { header: 'Product Name', key: 'Product Name' },
+    { header: 'Product SKU', key: 'Product SKU' },
+    { header: 'Variant Name', key: 'Variant Name' },
     { header: 'Quantity', key: 'Quantity' },
     { header: 'Unit Price', key: 'Unit Price' },
-    { header: 'Total Amount', key: 'Total Amount' },
+    { header: 'Item Total', key: 'Item Total' },
+    { header: 'Order Total', key: 'Order Total' },
     { header: 'Status', key: 'Status' },
+    { header: 'Payment Status', key: 'Payment Status' },
     { header: 'Order Date', key: 'Order Date' },
-    { header: 'Delivery Date', key: 'Delivery Date' }
+    { header: 'Expected Delivery', key: 'Expected Delivery' },
+    { header: 'Actual Delivery', key: 'Actual Delivery' },
+    { header: 'Delivery Address', key: 'Delivery Address' },
+    { header: 'Notes', key: 'Notes' },
+    { header: 'Created By', key: 'Created By' },
+    { header: 'Created Date', key: 'Created Date' }
   ]);
 };
 
@@ -419,10 +478,10 @@ export const exportProducts = (products, format = 'excel') => {
     'Product Name': product.name || 'Unknown',
     'SKU': product.sku || 'N/A',
     'Category': product.category || 'Uncategorized',
+    'Unit': product.unit || 'pcs',
     'Description': product.description || 'No description',
-    'Unit Price': product.unitPrice || 0,
-    'Stock Quantity': product.stockQuantity || 0,
-    'Minimum Stock': product.minimumStock || 0,
+    'Selling Price': product.sellingPrice || 0,
+    'Has Variants': product.hasVariants ? 'Yes' : 'No',
     'Status': product.isActive ? 'Active' : 'Inactive',
     'Created Date': product.createdAt ? new Date(product.createdAt).toLocaleDateString() : 'Unknown'
   }));
@@ -431,10 +490,10 @@ export const exportProducts = (products, format = 'excel') => {
     { header: 'Product Name', key: 'Product Name' },
     { header: 'SKU', key: 'SKU' },
     { header: 'Category', key: 'Category' },
+    { header: 'Unit', key: 'Unit' },
     { header: 'Description', key: 'Description' },
-    { header: 'Unit Price', key: 'Unit Price' },
-    { header: 'Stock Quantity', key: 'Stock Quantity' },
-    { header: 'Minimum Stock', key: 'Minimum Stock' },
+    { header: 'Selling Price', key: 'Selling Price' },
+    { header: 'Has Variants', key: 'Has Variants' },
     { header: 'Status', key: 'Status' },
     { header: 'Created Date', key: 'Created Date' }
   ]);
@@ -469,36 +528,32 @@ export const exportWarehouses = (warehouses, format = 'excel') => {
 export const exportSuppliers = (suppliers, format = 'excel') => {
   const supplierData = suppliers.map(supplier => ({
     'Name': supplier.name || 'Unknown',
-    'Company': supplier.companyName || '',
+    'Company Name': supplier.companyName || '',
     'Email': supplier.email || 'No email',
     'Phone': supplier.phone || 'No phone',
     'Website': supplier.website || 'No website',
-    'Address': supplier.fullAddress || 'No address',
     'Payment Terms': supplier.paymentTerms || 'Net 30',
     'Credit Limit': supplier.creditLimit || 0,
     'Rating': supplier.rating || 0,
     'Status': supplier.status || 'Active',
     'Total Spent': supplier.totalSpent || 0,
     'Total Orders': supplier.totalPurchases || 0,
-    'Average Order Value': supplier.averageOrderValue || 0,
     'Last Purchase': supplier.lastPurchaseDate ? new Date(supplier.lastPurchaseDate).toLocaleDateString() : 'Never',
     'Created Date': supplier.createdAt ? new Date(supplier.createdAt).toLocaleDateString() : 'Unknown'
   }));
   
   return exportData(supplierData, format, 'suppliers', 'Supplier Report', [
     { header: 'Name', key: 'Name' },
-    { header: 'Company', key: 'Company' },
+    { header: 'Company Name', key: 'Company Name' },
     { header: 'Email', key: 'Email' },
     { header: 'Phone', key: 'Phone' },
     { header: 'Website', key: 'Website' },
-    { header: 'Address', key: 'Address' },
     { header: 'Payment Terms', key: 'Payment Terms' },
     { header: 'Credit Limit', key: 'Credit Limit' },
     { header: 'Rating', key: 'Rating' },
     { header: 'Status', key: 'Status' },
     { header: 'Total Spent', key: 'Total Spent' },
     { header: 'Total Orders', key: 'Total Orders' },
-    { header: 'Average Order Value', key: 'Average Order Value' },
     { header: 'Last Purchase', key: 'Last Purchase' },
     { header: 'Created Date', key: 'Created Date' }
   ]);
