@@ -349,35 +349,35 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
 
           {/* SKU - Hidden when using variants */}
           {!showVariants && (
-            <div>
-              <label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-3">
-                SKU *
-              </label>
-              <div className="flex">
-                <input
-                  type="text"
-                  id="sku"
-                  name="sku"
+          <div>
+            <label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-3">
+              SKU *
+            </label>
+            <div className="flex">
+              <input
+                type="text"
+                id="sku"
+                name="sku"
                   required={!showVariants}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Enter or generate SKU"
-                  value={formData.sku}
-                  onChange={handleChange}
-                />
-                <button
-                  type="button"
-                  onClick={generateSKU}
-                  disabled={generatingSKU}
-                  className="px-6 py-3 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
-                >
-                  {generatingSKU ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                  ) : (
-                    'Generate'
-                  )}
-                </button>
-              </div>
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Enter or generate SKU"
+                value={formData.sku}
+                onChange={handleChange}
+              />
+              <button
+                type="button"
+                onClick={generateSKU}
+                disabled={generatingSKU}
+                className="px-6 py-3 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+              >
+                {generatingSKU ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Generate'
+                )}
+              </button>
             </div>
+          </div>
           )}
 
           {/* Category */}
@@ -445,26 +445,32 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
             </div>
           )} */}
 
-          {/* Selling Price - Hidden when using variants */}
-          {!showVariants && (
-            <div>
-              <label htmlFor="sellingPrice" className="block text-sm font-medium text-gray-700 mb-3">
-                Selling Price (PKR) *
-              </label>
-              <input
-                type="number"
-                id="sellingPrice"
-                name="sellingPrice"
-                required={!showVariants}
-                min="0"
-                step="0.01"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="0.00"
-                value={formData.sellingPrice}
-                onChange={handleChange}
-              />
-            </div>
-          )}
+          {/* Selling Price - Disabled when variants are active */}
+          <div>
+            <label htmlFor="sellingPrice" className="block text-sm font-medium text-gray-700 mb-3">
+              Selling Price (PKR) {!showVariants && '*'}
+            </label>
+            <input
+              type="number"
+              id="sellingPrice"
+              name="sellingPrice"
+              required={!showVariants}
+              min="0"
+              step="0.01"
+              disabled={showVariants}
+              className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
+                showVariants ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
+              }`}
+              placeholder={showVariants ? 'Disabled - Set price for each variant below' : 'Enter selling price'}
+              value={formData.sellingPrice}
+              onChange={handleChange}
+            />
+            {showVariants && (
+              <p className="mt-1 text-xs text-gray-500">
+                ℹ️ This field is disabled. Set the price for each variant below.
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Description */}

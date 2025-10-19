@@ -283,20 +283,22 @@ const ProductList = () => {
                   <div className="flex space-x-2">
                     <button
                       onClick={() => setSelectedProduct(product)}
-                      className="text-gray-400 hover:text-primary-600"
+                      className="text-gray-400 hover:text-primary-600 transition-colors"
+                      title="View Details"
                     >
                       <Eye className="h-4 w-4" />
                     </button>
-                    {/* Edit button commented out as requested */}
-                    {/* <button
+                    <button
                       onClick={() => navigate(`/products/${product._id}/edit`)}
-                      className="text-gray-400 hover:text-blue-600"
+                      className="text-gray-400 hover:text-blue-600 transition-colors"
+                      title="Edit Product"
                     >
                       <Edit className="h-4 w-4" />
-                    </button> */}
+                    </button>
                     <button
                       onClick={() => openDeleteModal(product)}
-                      className="text-gray-400 hover:text-red-600"
+                      className="text-gray-400 hover:text-red-600 transition-colors"
+                      title="Delete Product"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -319,43 +321,18 @@ const ProductList = () => {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-semibold text-blue-600 flex items-center">
                           <Grid3X3 className="h-4 w-4 mr-1" />
-                          {product.variants.length} Variants
+                          {product.variants.length} Variants Available
                         </span>
                       </div>
-                      <div className="space-y-2">
-                        {product.variants.slice(0, 3).map((variant, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-xs bg-gradient-to-r from-blue-50 to-indigo-50 rounded px-2 py-1.5">
-                            <div className="flex items-center space-x-1 flex-1 min-w-0">
-                              <span className="font-medium text-gray-700 truncate">{variant.name}</span>
-                              {variant.stock > 0 ? (
-                                <span className="text-green-600 font-semibold">({variant.stock})</span>
-                              ) : (
-                                <span className="text-red-600 font-semibold">(0)</span>
-                              )}
-                            </div>
-                            <span className="text-gray-900 font-semibold ml-2 whitespace-nowrap">
-                              PKR {variant.sellingPrice}
-                            </span>
-                          </div>
-                        ))}
-                        {product.variants.length > 3 && (
-                          <div className="text-xs text-center text-blue-600 font-medium">
-                            +{product.variants.length - 3} more variants
-                          </div>
-                        )}
+                      <div className="text-xs text-gray-600">
+                        Click "View" to see variant details and prices
                       </div>
                     </div>
                   ) : (
-                    <>
-                  {/* <div className="flex justify-between">
-                    <span className="text-gray-600">Cost Price:</span>
-                    <span className="font-medium">PKR {product.costPrice}</span>
-                  </div> */}
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Selling Price:</span>
-                    <span className="font-medium">PKR {product.sellingPrice}</span>
-                  </div>
-                    </>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Selling Price:</span>
+                      <span className="font-medium">PKR {product.sellingPrice}</span>
+                    </div>
                   )}
                   
                   <div className="flex justify-between items-center">
@@ -456,22 +433,15 @@ const ProductList = () => {
                       </td> */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         {product.hasVariants && product.variants && product.variants.length > 0 ? (
-                          <div className="text-xs space-y-0.5">
-                            {product.variants.slice(0, 2).map((variant, idx) => (
-                              <div key={idx} className="text-gray-700">
-                                <span className="font-medium">{variant.name}:</span>{' '}
-                                <span className="text-gray-900 font-semibold">PKR {variant.sellingPrice}</span>
-                              </div>
-                            ))}
-                            {product.variants.length > 2 && (
-                              <div className="text-blue-600 font-medium">+{product.variants.length - 2} more</div>
-                            )}
+                          <div className="flex items-center">
+                            <Grid3X3 className="h-4 w-4 text-blue-600 mr-2" />
+                            <span className="text-sm font-semibold text-blue-600">{product.variants.length} Variants</span>
                           </div>
                         ) : (
-                        <div className="flex items-center">
-                          <DollarSign className="h-4 w-4 text-gray-400 mr-2" />
-                          <span className="text-sm font-medium text-gray-900">PKR {product.sellingPrice}</span>
-                        </div>
+                          <div className="flex items-center">
+                            <DollarSign className="h-4 w-4 text-gray-400 mr-2" />
+                            <span className="text-sm font-medium text-gray-900">PKR {product.sellingPrice}</span>
+                          </div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -491,22 +461,21 @@ const ProductList = () => {
                         <div className="flex items-center justify-end space-x-2">
                           <button
                             onClick={() => setSelectedProduct(product)}
-                            className="text-gray-400 hover:text-primary-600 transition-colors"
+                            className="text-gray-400 hover:text-primary-600 transition-colors p-1 hover:bg-primary-50 rounded"
                             title="View Details"
                           >
                             <Eye className="h-4 w-4" />
                           </button>
-                          {/* Edit button commented out as requested */}
-                          {/* <button
+                          <button
                             onClick={() => navigate(`/products/${product._id}/edit`)}
-                            className="text-gray-400 hover:text-blue-600 transition-colors"
+                            className="text-gray-400 hover:text-blue-600 transition-colors p-1 hover:bg-blue-50 rounded"
                             title="Edit Product"
                           >
                             <Edit className="h-4 w-4" />
-                          </button> */}
+                          </button>
                           <button
                             onClick={() => openDeleteModal(product)}
-                            className="text-gray-400 hover:text-red-600 transition-colors"
+                            className="text-gray-400 hover:text-red-600 transition-colors p-1 hover:bg-red-50 rounded"
                             title="Delete Product"
                           >
                             <Trash2 className="h-4 w-4" />
