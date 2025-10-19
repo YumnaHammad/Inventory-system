@@ -107,8 +107,11 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
     setError(null);
 
     try {
-      // Validate required fields
-      const requiredFields = ['name', 'sku', 'category', 'sellingPrice'];
+      // Validate required fields - SKU and selling price only required when no variants
+      const requiredFields = ['name', 'category'];
+      if (!showVariants) {
+        requiredFields.push('sku', 'sellingPrice');
+      }
       // if (user?.role === 'admin') {
       //   requiredFields.push('costPrice');
       // }
@@ -119,7 +122,7 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
         }
       }
 
-      if (parseFloat(formData.sellingPrice) <= 0) {
+      if (!showVariants && parseFloat(formData.sellingPrice) <= 0) {
         throw new Error('Selling price must be greater than 0');
       }
       
@@ -129,11 +132,20 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
 
       // Include variants if they exist
       const submitData = {
-        ...formData,
+        name: formData.name,
+        category: formData.category,
+        unit: formData.unit,
+        description: formData.description,
         hasVariants: variants.length > 0,
         attributes: variants.length > 0 ? attributes : undefined,
         variants: variants.length > 0 ? variants : undefined
       };
+      
+      // Only include SKU and selling price if no variants
+      if (!showVariants) {
+        submitData.sku = formData.sku;
+        submitData.sellingPrice = formData.sellingPrice;
+      }
 
       await onSubmit(submitData);
     } catch (err) {
@@ -335,36 +347,38 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
             />
           </div>
 
-          {/* SKU */}
-          <div>
-            <label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-3">
-              SKU *
-            </label>
-            <div className="flex">
-              <input
-                type="text"
-                id="sku"
-                name="sku"
-                required
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                placeholder="Enter or generate SKU"
-                value={formData.sku}
-                onChange={handleChange}
-              />
-              <button
-                type="button"
-                onClick={generateSKU}
-                disabled={generatingSKU}
-                className="px-6 py-3 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
-              >
-                {generatingSKU ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  'Generate'
-                )}
-              </button>
+          {/* SKU - Hidden when using variants */}
+          {!showVariants && (
+            <div>
+              <label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-3">
+                SKU *
+              </label>
+              <div className="flex">
+                <input
+                  type="text"
+                  id="sku"
+                  name="sku"
+                  required={!showVariants}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Enter or generate SKU"
+                  value={formData.sku}
+                  onChange={handleChange}
+                />
+                <button
+                  type="button"
+                  onClick={generateSKU}
+                  disabled={generatingSKU}
+                  className="px-6 py-3 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+                >
+                  {generatingSKU ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    'Generate'
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Category */}
           <div>
