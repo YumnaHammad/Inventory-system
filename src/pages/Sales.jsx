@@ -24,6 +24,8 @@ const Sales = () => {
   const [confirmAction, setConfirmAction] = useState(null);
   const [confirmSale, setConfirmSale] = useState(null);
   const [timeFilter, setTimeFilter] = useState('all'); // all, day, week, month
+  const [sortFilter, setSortFilter] = useState('newest'); // newest, oldest, amount_high, amount_low, status
+  const [selectedDate, setSelectedDate] = useState(''); // For calendar date picker
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState('list'); // 'grid' or 'list'
   const [currentPage, setCurrentPage] = useState(1);
@@ -61,7 +63,7 @@ const Sales = () => {
       // Calculate stats from real data (will be 0 if no sales)
       const stats = {
         totalSales: salesData.length,
-        totalDelivered: salesData.filter(sale => sale.status === 'delivered').length,
+        totalDelivered: salesData.filter(sale => sale.status === 'delivered' || sale.status === 'confirmed_delivered').length,
         totalReturns: salesData.filter(sale => sale.status === 'returned' || sale.status === 'expected_return').length,
         totalRevenue: salesData
           .filter(sale => sale.status !== 'returned' && sale.status !== 'expected_return' && sale.status !== 'cancelled')
@@ -207,7 +209,7 @@ const Sales = () => {
       // Calculate stats from dummy data
       const stats = {
         totalSales: dummySales.length,
-        totalDelivered: dummySales.filter(sale => sale.status === 'delivered').length,
+        totalDelivered: dummySales.filter(sale => sale.status === 'delivered' || sale.status === 'confirmed_delivered').length,
         totalReturns: dummySales.filter(sale => sale.status === 'returned').length,
         totalRevenue: dummySales.reduce((sum, sale) => sum + (sale.totalAmount || 0), 0)
       };
@@ -238,7 +240,7 @@ const Sales = () => {
             const newStats = { ...prevStats };
             newSales.forEach(sale => {
               newStats.totalSales += 1;
-              newStats.totalDelivered += (sale.status === 'delivered' ? 1 : 0);
+              newStats.totalDelivered += (sale.status === 'delivered' || sale.status === 'confirmed_delivered' ? 1 : 0);
               newStats.totalReturns += (sale.status === 'returned' ? 1 : 0);
               newStats.totalRevenue += sale.totalAmount || 0;
             });
@@ -279,32 +281,70 @@ const Sales = () => {
 
   // Filter sales by time period
   const getFilteredSales = () => {
-    if (timeFilter === 'all') return sales;
+    let filteredSales = sales;
     
-    const now = new Date();
-    let filterDate;
-    
-    switch (timeFilter) {
-      case 'day':
-        filterDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        break;
-      case 'week':
-        filterDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case 'month':
-        filterDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        break;
-      case '90days':
-        filterDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-        break;
-      case 'year':
-        filterDate = new Date(now.getFullYear(), 0, 1);
-        break;
-      default:
-        return sales;
+    // Apply time filter
+    if (timeFilter !== 'all') {
+      const now = new Date();
+      let filterDate;
+      
+      switch (timeFilter) {
+        case 'day':
+          filterDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case 'week':
+          filterDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case 'month':
+          filterDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+        case '90days':
+          filterDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          break;
+        case 'year':
+          filterDate = new Date(now.getFullYear(), 0, 1);
+          break;
+        case 'custom':
+          // Handle custom date selection
+          if (selectedDate) {
+            const selected = new Date(selectedDate);
+            const startOfDay = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate());
+            const endOfDay = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate() + 1);
+            filteredSales = sales.filter(sale => {
+              const saleDate = new Date(sale.createdAt);
+              return saleDate >= startOfDay && saleDate < endOfDay;
+            });
+            return filteredSales;
+          }
+          break;
+        default:
+          break;
+      }
+      
+      if (timeFilter !== 'custom') {
+        filteredSales = sales.filter(sale => new Date(sale.createdAt) >= filterDate);
+      }
     }
     
-    return sales.filter(sale => new Date(sale.createdAt) >= filterDate);
+    // Apply sort filter
+    const sortedSales = [...filteredSales].sort((a, b) => {
+      switch (sortFilter) {
+        case 'newest':
+          return new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id);
+        case 'oldest':
+          return new Date(a.createdAt || a._id) - new Date(b.createdAt || b._id);
+        case 'amount_high':
+          return (b.totalAmount || 0) - (a.totalAmount || 0);
+        case 'amount_low':
+          return (a.totalAmount || 0) - (b.totalAmount || 0);
+        case 'status':
+          return (a.status || '').localeCompare(b.status || '');
+        default:
+          return new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id);
+      }
+    });
+    
+    return sortedSales;
   };
 
   // Pagination logic
@@ -317,11 +357,25 @@ const Sales = () => {
   // Reset to page 1 when filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [timeFilter]);
+  }, [timeFilter, sortFilter, selectedDate]);
 
   // Handle filter change
   const handleFilterChange = (newFilter) => {
     setTimeFilter(newFilter);
+    if (newFilter !== 'custom') {
+      setSelectedDate(''); // Clear selected date when switching to other filters
+    }
+  };
+
+  // Handle date change
+  const handleDateChange = (date) => {
+    setSelectedDate(date);
+    setTimeFilter('custom');
+  };
+
+  // Handle sort change
+  const handleSortChange = (newSort) => {
+    setSortFilter(newSort);
   };
 
   // Handle refresh button click
@@ -411,6 +465,11 @@ const Sales = () => {
         toast.success(`Return confirmed! Stock added to ${warehouseName}! ✅`, {
           duration: 5000,
           icon: '🔄'
+        });
+      } else if (newStatus === 'confirmed_delivered') {
+        toast.success(`Order confirmed as delivered! Items moved to confirmed delivered column in warehouse! ✅`, {
+          duration: 5000,
+          icon: '✓'
         });
       } else {
         toast.success(`Status updated to ${newStatus}!`);
@@ -588,7 +647,7 @@ const Sales = () => {
             // Update stats immediately
             setSalesStats(prev => ({
               totalSales: prev.totalSales + 1,
-              totalDelivered: prev.totalDelivered + (newSale.status === 'delivered' ? 1 : 0),
+              totalDelivered: prev.totalDelivered + (newSale.status === 'delivered' || newSale.status === 'confirmed_delivered' ? 1 : 0),
               totalReturns: prev.totalReturns + (newSale.status === 'returned' ? 1 : 0),
               totalRevenue: prev.totalRevenue + (newSale.totalAmount || 0)
             }));
@@ -738,16 +797,29 @@ const Sales = () => {
       </div>
 
       {/* Sales Records Section */}
-      <div className="card p-6">
-        <div className="flex justify-between items-center mb-6">
+      <div className="card p-6 mt-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
           <h2 className="text-lg font-semibold text-gray-900">
             Sales Records ({filteredSales.length} of {sales.length} total)
           </h2>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4 flex-wrap">
+            <select
+              value={sortFilter}
+              onChange={(e) => handleSortChange(e.target.value)}
+              className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+              title="Sort by"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="amount_high">Amount (High to Low)</option>
+              <option value="amount_low">Amount (Low to High)</option>
+              <option value="status">By Status</option>
+            </select>
             <select
               value={timeFilter}
               onChange={(e) => handleFilterChange(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+              className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+              title="Filter by time"
             >
               <option value="all">All Time</option>
               <option value="day">Today</option>
@@ -755,11 +827,22 @@ const Sales = () => {
               <option value="month">This Month</option>
               <option value="90days">Last 90 Days</option>
               <option value="year">This Year</option>
+              <option value="custom">Custom Date</option>
             </select>
+            {timeFilter === 'custom' && (
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => handleDateChange(e.target.value)}
+                className="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 cursor-pointer"
+                title="Select specific date"
+                max={new Date().toISOString().split('T')[0]} // Don't allow future dates
+              />
+            )}
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-3 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               title="Refresh sales data"
             >
               <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
@@ -772,7 +855,9 @@ const Sales = () => {
             <Truck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500 text-lg">No sales found</p>
             <p className="text-gray-400 text-sm mt-2">
-              {timeFilter === 'all' ? 'Start by creating your first sales order to see real data' : `No sales found for the selected ${timeFilter} period`}
+              {timeFilter === 'all' ? 'Start by creating your first sales order to see real data' : 
+               timeFilter === 'custom' ? `No sales found for ${selectedDate ? new Date(selectedDate).toLocaleDateString() : 'the selected date'}` :
+               `No sales found for the selected ${timeFilter} period`}
             </p>
             <button
               onClick={() => navigate('/sales/new')}
@@ -801,6 +886,7 @@ const Sales = () => {
                       <span className="font-semibold text-gray-900">{sale.orderNumber}</span>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         sale.status === 'delivered' ? 'bg-green-100 text-green-800' :
+                        sale.status === 'confirmed_delivered' ? 'bg-emerald-100 text-emerald-800' :
                         sale.status === 'returned' ? 'bg-red-100 text-red-800' :
                         sale.status === 'expected_return' ? 'bg-purple-100 text-purple-800' :
                         sale.status === 'dispatched' || sale.status === 'dispatch' ? 'bg-blue-100 text-blue-800' :
@@ -808,7 +894,9 @@ const Sales = () => {
                         sale.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
                         'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {sale.status === 'expected_return' ? 'Expected Return' : sale.status}
+                        {sale.status === 'expected_return' ? 'Expected Return' : 
+                         sale.status === 'confirmed_delivered' ? 'Confirmed Delivered' : 
+                         sale.status}
                       </span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4 text-xs sm:text-sm text-gray-600">
@@ -859,7 +947,7 @@ const Sales = () => {
                   </div>
                   <div className="text-right min-w-0 flex-shrink-0 sm:ml-4 mt-3 sm:mt-0">
                     <div className="text-xs sm:text-sm text-gray-500 mb-1 sm:mb-2">
-                      Customer: {sale.customerId?.name || sale.customerName || 'Unknown'}
+                      Customer: {sale.customerName || sale.customerInfo?.name || sale.customerId?.name || 'Unknown'}
                     </div>
                     <div className="text-xs text-gray-400 mb-2 sm:mb-4">
                       {sale.deliveryDate ? `Delivered: ${new Date(sale.deliveryDate).toLocaleDateString()}` : 'Not delivered yet'}
@@ -913,17 +1001,37 @@ const Sales = () => {
                       
                       
                       {sale.status === 'delivered' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            showConfirmation(sale, 'expected_return');
-                          }}
-                          className="bg-purple-600 hover:bg-purple-700 text-white flex items-center text-xs px-2 py-1 rounded transition-colors"
-                          title="Mark as Expected Return - Product will appear in Expected Returns module"
-                        >
-                          <Clock className="w-3 h-3 mr-1" />
-                          Expected Return
-                        </button>
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              showConfirmation(sale, 'confirmed_delivered');
+                            }}
+                            className="bg-green-600 hover:bg-green-700 text-white flex items-center text-xs px-2 py-1 rounded transition-colors shadow-sm whitespace-nowrap"
+                            title="Confirm Delivered - Move to confirmed delivered column in warehouse"
+                          >
+                            <CheckCircle className="w-3 h-3 mr-1" />
+                            Confirm Delivered
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              showConfirmation(sale, 'expected_return');
+                            }}
+                            className="bg-purple-600 hover:bg-purple-700 text-white flex items-center text-xs px-2 py-1 rounded transition-colors"
+                            title="Mark as Expected Return - Product will appear in Expected Returns module"
+                          >
+                            <Clock className="w-3 h-3 mr-1" />
+                            Expected Return
+                          </button>
+                        </>
+                      )}
+                      
+                      {sale.status === 'confirmed_delivered' && (
+                        <div className="flex items-center text-xs text-gray-500">
+                          <CheckCircle className="w-3 h-3 mr-1 text-green-600" />
+                          Confirmed Delivered
+                        </div>
                       )}
                       
                       {sale.status === 'returned' && (
@@ -1030,6 +1138,7 @@ const Sales = () => {
               <h3 className="text-lg font-semibold text-gray-900">
                 {confirmAction === 'dispatch' && 'Confirm Dispatch'}
                 {confirmAction === 'delivered' && 'Confirm Delivery'}
+                {confirmAction === 'confirmed_delivered' && 'Confirm Delivered'}
                 {confirmAction === 'expected_return' && 'Confirm Expected Return'}
                 {confirmAction === 'returnReceived' && 'Confirm Return Received'}
               </h3>
@@ -1045,6 +1154,7 @@ const Sales = () => {
               <p className="text-gray-600 mb-4">
                 {confirmAction === 'dispatch' && `Are you sure you want to dispatch order ${confirmSale?.orderNumber}? This will reserve stock in warehouse.`}
                 {confirmAction === 'delivered' && `Are you sure you want to mark order ${confirmSale?.orderNumber} as delivered?`}
+                {confirmAction === 'confirmed_delivered' && `Are you sure you want to confirm delivery for order ${confirmSale?.orderNumber}? This will move items to the confirmed delivered column in warehouse and disable the Expected Return option.`}
                 {confirmAction === 'expected_return' && `Are you sure you want to mark order ${confirmSale?.orderNumber} as expected return? This will add it to the Expected Returns module.`}
                 {confirmAction === 'returnReceived' && `Are you sure you want to confirm that the return for order ${confirmSale?.orderNumber} has been received back to warehouse?`}
               </p>
@@ -1066,6 +1176,7 @@ const Sales = () => {
                 >
                   {confirmAction === 'dispatch' && 'Dispatch Order'}
                   {confirmAction === 'delivered' && 'Mark as Delivered'}
+                  {confirmAction === 'confirmed_delivered' && 'Confirm Delivered'}
                   {confirmAction === 'expected_return' && 'Mark as Expected Return'}
                   {confirmAction === 'returnReceived' && 'Confirm Return'}
                 </button>

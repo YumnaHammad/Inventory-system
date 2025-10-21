@@ -314,8 +314,9 @@ export const exportSales = (sales, format = 'excel') => {
     if (sale.items && Array.isArray(sale.items)) {
       return sale.items.map(item => ({
         'Order Number': sale.orderNumber || 'N/A',
-        'Customer Name': sale.customerInfo?.name || 'Unknown',
-        'Customer Email': sale.customerInfo?.email || 'N/A',
+        'Customer Name': sale.customerName || sale.customerInfo?.name || 'Unknown',
+        'Customer Address': sale.deliveryAddress ? 
+          `${sale.deliveryAddress.street || ''}, ${sale.deliveryAddress.city || ''}, ${sale.deliveryAddress.state || ''}, ${sale.deliveryAddress.country || ''}`.replace(/,\s*,/g, ',').replace(/^,\s*|,\s*$/g, '') : 'N/A',
         'Customer Phone': sale.customerInfo?.phone || 'N/A',
         'Product Name': item.productId?.name || 'Unknown',
         'Product SKU': item.productId?.sku || 'N/A',
@@ -323,14 +324,10 @@ export const exportSales = (sales, format = 'excel') => {
         'Quantity': item.quantity || 0,
         'Unit Price': item.unitPrice || 0,
         'Item Total': item.totalPrice || 0,
-        'Order Total': sale.totalAmount || 0,
         'Status': sale.status ? sale.status.charAt(0).toUpperCase() + sale.status.slice(1) : 'Pending',
         'Payment Status': sale.paymentStatus ? sale.paymentStatus.charAt(0).toUpperCase() + sale.paymentStatus.slice(1) : 'Pending',
         'Order Date': sale.orderDate ? new Date(sale.orderDate).toLocaleDateString() : 'Unknown',
         'Expected Delivery': sale.expectedDeliveryDate ? new Date(sale.expectedDeliveryDate).toLocaleDateString() : 'Not set',
-        'Actual Delivery': sale.actualDeliveryDate ? new Date(sale.actualDeliveryDate).toLocaleDateString() : 'Not delivered',
-        'Delivery Address': sale.deliveryAddress ? 
-          `${sale.deliveryAddress.street || ''}, ${sale.deliveryAddress.city || ''}, ${sale.deliveryAddress.state || ''}, ${sale.deliveryAddress.country || ''}`.replace(/,\s*,/g, ',').replace(/^,\s*|,\s*$/g, '') : 'N/A',
         'Notes': sale.notes || 'N/A',
         'Created By': sale.createdBy?.firstName ? `${sale.createdBy.firstName} ${sale.createdBy.lastName}` : 'Unknown',
         'Created Date': sale.createdAt ? new Date(sale.createdAt).toLocaleDateString() : 'Unknown'
@@ -340,7 +337,8 @@ export const exportSales = (sales, format = 'excel') => {
       return {
         'Order Number': sale.orderNumber || 'N/A',
         'Customer Name': sale.customerInfo?.name || sale.customerName || 'Unknown',
-        'Customer Email': sale.customerInfo?.email || 'N/A',
+        'Customer Address': sale.deliveryAddress ? 
+          `${sale.deliveryAddress.street || ''}, ${sale.deliveryAddress.city || ''}, ${sale.deliveryAddress.state || ''}, ${sale.deliveryAddress.country || ''}`.replace(/,\s*,/g, ',').replace(/^,\s*|,\s*$/g, '') : 'N/A',
         'Customer Phone': sale.customerInfo?.phone || 'N/A',
         'Product Name': sale.productName || 'Unknown',
         'Product SKU': sale.productSKU || 'N/A',
@@ -348,14 +346,10 @@ export const exportSales = (sales, format = 'excel') => {
         'Quantity': sale.quantity || 0,
         'Unit Price': sale.unitPrice || 0,
         'Item Total': sale.totalAmount || 0,
-        'Order Total': sale.totalAmount || 0,
         'Status': sale.status ? sale.status.charAt(0).toUpperCase() + sale.status.slice(1) : 'Pending',
         'Payment Status': sale.paymentStatus ? sale.paymentStatus.charAt(0).toUpperCase() + sale.paymentStatus.slice(1) : 'Pending',
         'Order Date': sale.orderDate ? new Date(sale.orderDate).toLocaleDateString() : 'Unknown',
         'Expected Delivery': sale.expectedDeliveryDate ? new Date(sale.expectedDeliveryDate).toLocaleDateString() : 'Not set',
-        'Actual Delivery': sale.actualDeliveryDate ? new Date(sale.actualDeliveryDate).toLocaleDateString() : 'Not delivered',
-        'Delivery Address': sale.deliveryAddress ? 
-          `${sale.deliveryAddress.street || ''}, ${sale.deliveryAddress.city || ''}, ${sale.deliveryAddress.state || ''}, ${sale.deliveryAddress.country || ''}`.replace(/,\s*,/g, ',').replace(/^,\s*|,\s*$/g, '') : 'N/A',
         'Notes': sale.notes || 'N/A',
         'Created By': sale.createdBy?.firstName ? `${sale.createdBy.firstName} ${sale.createdBy.lastName}` : 'Unknown',
         'Created Date': sale.createdAt ? new Date(sale.createdAt).toLocaleDateString() : 'Unknown'

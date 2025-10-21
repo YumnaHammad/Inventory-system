@@ -1,963 +1,677 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
-  BarChart3, TrendingUp, TrendingDown, Download, Filter, Calendar,
-  RefreshCw, Eye, FileText, Printer, Share2, Settings, ArrowUpRight, ArrowDownRight,
-  DollarSign, Package, Users, Truck, AlertTriangle, CheckCircle, XCircle,
-  Activity, Target, Zap, Star, Heart, ThumbsUp, ThumbsDown, MessageSquare,
-  Bell, BellOff, Volume2, VolumeX, Mic, MicOff, Camera, Video, Image,
-  File, Folder, Archive, Bookmark, Tag, Flag, Pin, Navigation, Compass,
-  Timer, History, RotateCcw, RotateCw, Undo, Redo, ArrowLeft,
-  ArrowRight, ArrowUp, ArrowDown, ChevronUp, ChevronDown, ChevronLeft,
-  ChevronRight, Plus, Minus, Maximize2, Minimize2, ExternalLink, Copy,
-  Upload, Search, Grid, List, Table, Layout, Palette, Moon, Sun, ShoppingCart
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Package,
+  Users,
+  ShoppingCart,
+  Truck,
+  BarChart3,
+  PieChart as PieChartIcon,
+  Calendar,
+  Download,
+  RefreshCw,
+  Filter,
+  ArrowUp,
+  ArrowDown,
+  Minus
 } from 'lucide-react';
-import {
-  LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart as RechartsPieChart,
-  Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  ComposedChart, ScatterChart, Scatter, RadarChart, PolarGrid, PolarAngleAxis,
-  PolarRadiusAxis, Radar, Treemap, FunnelChart, Funnel, LabelList,
-  Sankey, ReferenceLine, ReferenceArea, Brush, ErrorBar, Dot
-} from 'recharts';
 import api from '../services/api';
-import ExportButton from '../components/ExportButton';
+import toast from 'react-hot-toast';
+import CenteredLoader from '../components/CenteredLoader';
 
 const AdvancedReports = () => {
-  // State Management
-  const [activeTab, setActiveTab] = useState('overview');
-  const [dateRange, setDateRange] = useState('30d');
-  const [selectedWarehouse, setSelectedWarehouse] = useState('all');
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  // Report Data
-  const [reportData, setReportData] = useState({
-    overview: {
-      totalRevenue: 0,
-      totalProfit: 0,
-      totalOrders: 0,
-      totalProducts: 0,
-      averageOrderValue: 0,
-      profitMargin: 0,
-      growthRate: 0,
-      returnRate: 0
-    },
-    sales: {
-      dailySales: [],
-      weeklySales: [],
-      monthlySales: [],
-      topProducts: [],
-      topCustomers: [],
-      salesByCategory: [],
-      salesByWarehouse: [],
-      salesTrend: []
-    },
-    inventory: {
-      stockLevels: [],
-      lowStockProducts: [],
-      outOfStockProducts: [],
-      fastMovingProducts: [],
-      slowMovingProducts: [],
-      inventoryValue: [],
-      warehouseUtilization: [],
-      stockMovements: []
-    },
-    financial: {
-      revenue: [],
-      profit: [],
-      expenses: [],
-      cashFlow: [],
-      profitMargin: [],
-      roi: [],
-      costAnalysis: [],
-      budgetVsActual: []
-    },
-    performance: {
-      userActivity: [],
-      systemMetrics: [],
-      errorRates: [],
-      responseTimes: [],
-      uptime: [],
-      throughput: [],
-      efficiency: []
-    }
+  const [activeTab, setActiveTab] = useState('overview');
+  const [dateRange, setDateRange] = useState({
+    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
   });
-
-  // Fetch Report Data
-  const fetchReportData = async () => {
-    try {
-      setRefreshing(true);
-      
-      // Fetch REAL data from system
-      const [salesRes, productsRes, warehousesRes, purchasesRes] = await Promise.all([
-        api.get('/sales').catch(() => ({ data: [] })),
-        api.get('/products').catch(() => ({ data: { products: [] } })),
-        api.get('/warehouses').catch(() => ({ data: [] })),
-        api.get('/purchases').catch(() => ({ data: [] }))
-      ]);
-
-      const salesData = salesRes.data || [];
-      const productsData = productsRes.data?.products || [];
-      const warehousesData = warehousesRes.data || [];
-      const purchasesData = purchasesRes.data || [];
-
-      // Calculate REAL statistics (100% ACCURATE)
-      const totalOrders = salesData.length;
-      const deliveredOrders = salesData.filter(s => s.status === 'delivered').length;
-      const returnedOrders = salesData.filter(s => s.status === 'returned' || s.status === 'expected_return').length;
-      
-      // REVENUE = Only delivered orders (exclude cancelled, expected_return, returned)
-      const totalRevenue = salesData
-        .filter(s => s.status !== 'cancelled' && s.status !== 'returned' && s.status !== 'expected_return')
-        .reduce((sum, sale) => sum + (sale.totalAmount || 0), 0);
-      
-      // COST = Only PAID purchases
-      const totalCost = purchasesData
-        .filter(p => p.paymentStatus === 'paid')
-        .reduce((sum, purchase) => sum + (purchase.totalAmount || 0), 0);
-      
-      // PROFIT = Revenue - Cost
-      const totalProfit = totalRevenue - totalCost;
-      
-      // PROFIT MARGIN = (Profit / Revenue) × 100
-      const profitMargin = totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100) : 0;
-      
-      // AVERAGE ORDER VALUE = Revenue / Total Orders
-      const avgOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
-      
-      // RETURN RATE = (Returned Orders / Total Orders) × 100
-      const returnRate = totalOrders > 0 ? ((returnedOrders / totalOrders) * 100) : 0;
-
-      // Generate sales trend data (last 30 days) - ACCURATE CALCULATION
-      const dailySales = [];
-      for (let i = 29; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
-        
-        // All sales for this day (not cancelled)
-        const daySales = salesData.filter(s => {
-          const saleDate = new Date(s.createdAt).toISOString().split('T')[0];
-          return saleDate === dateStr && s.status !== 'cancelled';
-        });
-        
-        // Revenue = Only non-returned orders
-        const dayRevenue = daySales
-          .filter(s => s.status !== 'returned' && s.status !== 'expected_return')
-          .reduce((sum, s) => sum + (s.totalAmount || 0), 0);
-        
-        const dayOrders = daySales.length;
-        
-        // Profit estimate (will be accurate once we have cost data per day)
-        const dayProfit = profitMargin > 0 ? (dayRevenue * (profitMargin / 100)) : 0;
-        
-        dailySales.push({
-          date: dateStr,
-          revenue: dayRevenue,
-          orders: dayOrders,
-          profit: Math.round(dayProfit)
-        });
-      }
-
-      // Top products by sales
-      const productSalesMap = new Map();
-      salesData.forEach(sale => {
-        if (sale.status !== 'cancelled' && sale.items) {
-          sale.items.forEach(item => {
-            const productId = item.productId?._id || item.productId;
-            const productName = item.productId?.name || 'Unknown Product';
-            const variantName = item.variantName ? ` - ${item.variantName}` : '';
-            const fullName = `${productName}${variantName}`;
-            
-            if (!productSalesMap.has(productId)) {
-              productSalesMap.set(productId, {
-                name: fullName,
-                sales: 0,
-                revenue: 0,
-                quantity: 0
-              });
-            }
-            
-            const data = productSalesMap.get(productId);
-            data.sales += 1;
-            data.quantity += item.quantity || 0;
-            data.revenue += (item.quantity || 0) * (item.unitPrice || 0);
-          });
-        }
-      });
-      
-      const topProducts = Array.from(productSalesMap.values())
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 10)
-        .map(p => ({
-          ...p,
-          profit: p.revenue * 0.18
-        }));
-
-      // Sales by warehouse
-      const warehouseSalesMap = new Map();
-      warehousesData.forEach(wh => {
-        warehouseSalesMap.set(wh._id, {
-          warehouse: wh.name,
-          sales: 0,
-          revenue: 0,
-          utilization: 0,
-          efficiency: 0
-        });
-      });
-      
-      salesData.forEach(sale => {
-        if (sale.status !== 'cancelled' && sale.warehouseId) {
-          const whId = sale.warehouseId._id || sale.warehouseId;
-          if (warehouseSalesMap.has(whId)) {
-            const data = warehouseSalesMap.get(whId);
-            data.sales += 1;
-            data.revenue += sale.totalAmount || 0;
-          }
-        }
-      });
-      
-      const salesByWarehouse = Array.from(warehouseSalesMap.values());
-
-      // Set REAL data
-      setReportData({
-        overview: {
-          totalRevenue: Math.round(totalRevenue),
-          totalProfit: Math.round(totalProfit),
-          totalOrders: totalOrders,
-          totalProducts: productsData.length,
-          averageOrderValue: Math.round(avgOrderValue),
-          profitMargin: parseFloat(profitMargin.toFixed(1)),
-          growthRate: 12.5,
-          returnRate: parseFloat(returnRate.toFixed(1))
-        },
-        sales: {
-          dailySales,
-          weeklySales: [],
-          monthlySales: [],
-          topProducts,
-          topCustomers: [],
-          salesByCategory: [],
-          salesByWarehouse,
-          salesTrend: dailySales
-        },
-        inventory: {
-          stockLevels: warehousesData,
-          lowStockProducts: warehousesData.flatMap(wh => 
-            (wh.currentStock || [])
-              .filter(s => (s.quantity - (s.reservedQuantity || 0)) < 10 && (s.quantity - (s.reservedQuantity || 0)) > 0)
-              .map(s => ({
-                product: s.productId?.name || 'Unknown',
-                warehouse: wh.name,
-                available: (s.quantity || 0) - (s.reservedQuantity || 0)
-              }))
-          ),
-          outOfStockProducts: warehousesData.flatMap(wh => 
-            (wh.currentStock || [])
-              .filter(s => (s.quantity - (s.reservedQuantity || 0)) <= 0)
-              .map(s => ({
-                product: s.productId?.name || 'Unknown',
-                warehouse: wh.name
-              }))
-          ),
-          fastMovingProducts: topProducts.slice(0, 5),
-          slowMovingProducts: [],
-          inventoryValue: [],
-          warehouseUtilization: salesByWarehouse,
-          stockMovements: []
-        },
-        financial: {
-          revenue: dailySales.map((d, i) => ({
-            month: new Date(d.date).toLocaleDateString('en-US', { month: 'short' }),
-            revenue: d.revenue,
-            profit: d.profit
-          })),
-          profit: [],
-          expenses: [],
-          cashFlow: [],
-          profitMargin: [],
-          roi: [],
-          costAnalysis: [],
-          budgetVsActual: []
-        },
-        performance: {
-          userActivity: [],
-          systemMetrics: [],
-          errorRates: [],
-          responseTimes: [],
-          uptime: [],
-          throughput: [],
-          efficiency: []
-        }
-      });
-
-    } catch (error) {
-      console.error('Error fetching report data:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  
+  // Report Data
+  const [overviewData, setOverviewData] = useState(null);
+  const [salesAnalytics, setSalesAnalytics] = useState(null);
+  const [purchaseAnalytics, setPurchaseAnalytics] = useState(null);
+  const [productPerformance, setProductPerformance] = useState([]);
+  const [supplierAnalytics, setSupplierAnalytics] = useState([]);
+  const [customerAnalytics, setCustomerAnalytics] = useState([]);
+  const [profitAnalysis, setProfitAnalysis] = useState(null);
 
   useEffect(() => {
-    fetchReportData();
-  }, [dateRange, selectedWarehouse, selectedCategory]);
+    fetchAllReports();
+  }, [dateRange]);
 
-  // Component for Metric Cards
-  const MetricCard = ({ title, value, change, icon: Icon, color = "blue", format = "number" }) => {
-    const formatValue = (val) => {
-      if (format === "currency") return `PKR ${val.toLocaleString()}`;
-      if (format === "percentage") return `${val}%`;
-      return val.toLocaleString();
-    };
+  const fetchAllReports = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch all data in parallel
+      const [purchasesRes, salesRes, productsRes, suppliersRes] = await Promise.all([
+        api.get('/purchases?limit=1000&populate=supplierId,items.productId'),
+        api.get('/sales?limit=1000'),
+        api.get('/products?limit=1000'),
+        api.get('/suppliers?limit=1000')
+      ]);
 
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-xl shadow-lg p-6"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-            <p className="text-2xl font-bold text-gray-900 mb-2">{formatValue(value)}</p>
-            {change !== undefined && (
-              <div className={`flex items-center text-sm ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {change >= 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
-                {Math.abs(change)}%
-              </div>
-            )}
-          </div>
-          <div className={`p-3 rounded-full bg-${color}-100`}>
-            <Icon className={`w-6 h-6 text-${color}-600`} />
-          </div>
-        </div>
-      </motion.div>
-    );
+      const purchases = purchasesRes.data?.purchases || [];
+      const sales = salesRes.data?.salesOrders || salesRes.data?.sales || [];
+      const products = productsRes.data?.products || [];
+      const suppliers = suppliersRes.data?.suppliers || [];
+
+      // Filter by date range
+      const filteredPurchases = filterByDateRange(purchases);
+      const filteredSales = filterByDateRange(sales);
+
+      // Generate reports
+      generateOverviewReport(filteredPurchases, filteredSales, products);
+      generateSalesAnalytics(filteredSales);
+      generatePurchaseAnalytics(filteredPurchases);
+      generateProductPerformance(filteredSales, products);
+      generateSupplierAnalytics(filteredPurchases, suppliers);
+      generateCustomerAnalytics(filteredSales);
+      generateProfitAnalysis(filteredPurchases, filteredSales);
+
+    } catch (error) {
+      console.error('Error fetching reports:', error);
+      toast.error('Failed to load advanced reports');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Component for Chart Cards
-  const ChartCard = ({ title, children, className = "" }) => (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`bg-white rounded-xl shadow-lg p-6 ${className}`}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-        <div className="flex items-center space-x-2">
-          <ExportButton
-            data={[]}
-            filename={`${title.toLowerCase().replace(/\s+/g, '_')}_report`}
-            title={`${title} Report`}
-            variant="icon-only"
-            className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-          />
-          <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
-            <Printer className="w-4 h-4" />
-          </button>
-          <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
-            <Share2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-      {children}
-    </motion.div>
-  );
+  const filterByDateRange = (data) => {
+    return data.filter(item => {
+      const itemDate = new Date(item.createdAt || item.purchaseDate || item.orderDate);
+      const start = new Date(dateRange.startDate);
+      const end = new Date(dateRange.endDate);
+      end.setHours(23, 59, 59, 999);
+      return itemDate >= start && itemDate <= end;
+    });
+  };
+
+  const generateOverviewReport = (purchases, sales, products) => {
+    const totalPurchases = purchases.reduce((sum, p) => {
+      const subtotal = p.totalAmount || 0;
+      const tax = p.taxAmount || 0;
+      const discount = p.discountAmount || 0;
+      return sum + subtotal + tax - discount;
+    }, 0);
+
+    const totalSales = sales
+      .filter(s => s.status !== 'returned' && s.status !== 'cancelled')
+      .reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+
+    const totalProfit = totalSales - totalPurchases;
+    const profitMargin = totalSales > 0 ? (totalProfit / totalSales) * 100 : 0;
+
+    setOverviewData({
+      totalPurchases,
+      totalSales,
+      totalProfit,
+      profitMargin,
+      purchaseCount: purchases.length,
+      salesCount: sales.filter(s => s.status !== 'returned' && s.status !== 'cancelled').length,
+      productCount: products.length,
+      avgOrderValue: sales.length > 0 ? totalSales / sales.length : 0
+    });
+  };
+
+  const generateSalesAnalytics = (sales) => {
+    const validSales = sales.filter(s => s.status !== 'returned' && s.status !== 'cancelled');
+    
+    // Sales by status
+    const salesByStatus = validSales.reduce((acc, sale) => {
+      acc[sale.status] = (acc[sale.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Sales by day
+    const salesByDay = validSales.reduce((acc, sale) => {
+      const date = new Date(sale.orderDate || sale.createdAt).toLocaleDateString();
+      acc[date] = (acc[date] || 0) + (sale.totalAmount || 0);
+      return acc;
+    }, {});
+
+    setSalesAnalytics({
+      salesByStatus,
+      salesByDay,
+      totalOrders: validSales.length,
+      averageOrderValue: validSales.length > 0 
+        ? validSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0) / validSales.length 
+        : 0
+    });
+  };
+
+  const generatePurchaseAnalytics = (purchases) => {
+    const totalCost = purchases.reduce((sum, p) => {
+      const subtotal = p.totalAmount || 0;
+      const tax = p.taxAmount || 0;
+      const discount = p.discountAmount || 0;
+      return sum + subtotal + tax - discount;
+    }, 0);
+
+    // Purchases by payment method
+    const byPaymentMethod = purchases.reduce((acc, p) => {
+      const method = p.paymentMethod || 'unknown';
+      acc[method] = (acc[method] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Purchases by payment status
+    const byPaymentStatus = purchases.reduce((acc, p) => {
+      const status = p.paymentStatus || 'pending';
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {});
+
+    setPurchaseAnalytics({
+      totalCost,
+      purchaseCount: purchases.length,
+      byPaymentMethod,
+      byPaymentStatus,
+      averagePurchaseValue: purchases.length > 0 ? totalCost / purchases.length : 0
+    });
+  };
+
+  const generateProductPerformance = (sales, products) => {
+    const productSales = {};
+    
+    sales.forEach(sale => {
+      if (sale.status !== 'returned' && sale.status !== 'cancelled') {
+        sale.items?.forEach(item => {
+          const productId = item.productId?._id || item.productId;
+          const productName = item.productId?.name || 'Unknown';
+          const quantity = item.quantity || 0;
+          const price = item.unitPrice || 0;
+          const total = quantity * price;
+
+          if (!productSales[productId]) {
+            productSales[productId] = {
+              name: productName,
+              quantity: 0,
+              revenue: 0,
+              orders: 0
+            };
+          }
+
+          productSales[productId].quantity += quantity;
+          productSales[productId].revenue += total;
+          productSales[productId].orders += 1;
+        });
+      }
+    });
+
+    const sortedProducts = Object.values(productSales)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 20);
+
+    setProductPerformance(sortedProducts);
+  };
+
+  const generateSupplierAnalytics = (purchases, suppliers) => {
+    const supplierData = {};
+    
+    purchases.forEach(purchase => {
+      const supplierId = purchase.supplierId?._id || purchase.supplierId;
+      const supplierName = purchase.supplierId?.name || 'Unknown';
+      const amount = (purchase.totalAmount || 0) + (purchase.taxAmount || 0) - (purchase.discountAmount || 0);
+
+      if (!supplierData[supplierId]) {
+        supplierData[supplierId] = {
+          name: supplierName,
+          totalPurchases: 0,
+          orderCount: 0
+        };
+      }
+
+      supplierData[supplierId].totalPurchases += amount;
+      supplierData[supplierId].orderCount += 1;
+    });
+
+    const sortedSuppliers = Object.values(supplierData)
+      .sort((a, b) => b.totalPurchases - a.totalPurchases);
+
+    setSupplierAnalytics(sortedSuppliers);
+  };
+
+  const generateCustomerAnalytics = (sales) => {
+    const customerData = {};
+    
+    sales.forEach(sale => {
+      if (sale.status !== 'returned' && sale.status !== 'cancelled') {
+        const customerName = sale.customerName || 'Walk-in Customer';
+        const amount = sale.totalAmount || 0;
+
+        if (!customerData[customerName]) {
+          customerData[customerName] = {
+            name: customerName,
+            totalSpent: 0,
+            orderCount: 0
+          };
+        }
+
+        customerData[customerName].totalSpent += amount;
+        customerData[customerName].orderCount += 1;
+      }
+    });
+
+    const sortedCustomers = Object.values(customerData)
+      .sort((a, b) => b.totalSpent - a.totalSpent)
+      .slice(0, 20);
+
+    setCustomerAnalytics(sortedCustomers);
+  };
+
+  const generateProfitAnalysis = (purchases, sales) => {
+    const validSales = sales.filter(s => s.status !== 'returned' && s.status !== 'cancelled');
+    
+    const totalRevenue = validSales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+    const totalCost = purchases.reduce((sum, p) => {
+      const subtotal = p.totalAmount || 0;
+      const tax = p.taxAmount || 0;
+      const discount = p.discountAmount || 0;
+      return sum + subtotal + tax - discount;
+    }, 0);
+    
+    const grossProfit = totalRevenue - totalCost;
+    const profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+
+    setProfitAnalysis({
+      totalRevenue,
+      totalCost,
+      grossProfit,
+      profitMargin,
+      revenueGrowth: 0, // Can be calculated with historical data
+      costGrowth: 0
+    });
+  };
+
+  const formatCurrency = (amount) => {
+    return `PKR ${(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading advanced reports...</p>
-        </div>
-      </div>
-    );
+    return <CenteredLoader message="Loading advanced reports..." size="large" />;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Advanced Reports</h1>
-              <p className="text-gray-600">Comprehensive analytics and insights</p>
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 flex items-center gap-3">
+                <TrendingUp className="w-8 h-8 sm:w-10 sm:h-10 text-primary-600" />
+                Advanced Reports & Analytics
+              </h1>
+              <p className="text-gray-600 mt-2">Deep insights and business intelligence</p>
             </div>
-            <div className="flex items-center space-x-4">
-              {/* Date Range Selector */}
-              <select
-                value={dateRange}
-                onChange={(e) => {
-                  setDateRange(e.target.value);
-                  console.log(`Date range filter changed to: ${e.target.value}`);
-                }}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
-              >
-                <option value="7d">Last 7 Days</option>
-                <option value="30d">Last 30 Days</option>
-                <option value="90d">Last 90 Days</option>
-                <option value="1y">Last Year</option>
-              </select>
-
-              {/* Warehouse Filter */}
-              <select
-                value={selectedWarehouse}
-                onChange={(e) => {
-                  setSelectedWarehouse(e.target.value);
-                  console.log(`Warehouse filter changed to: ${e.target.value}`);
-                }}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
-              >
-                <option value="all">All Warehouses</option>
-                <option value="main">Main Warehouse</option>
-                <option value="central">Central Hub</option>
-                <option value="north">North Depot</option>
-              </select>
-              
-              {/* Refresh Button */}
+            <div className="flex flex-wrap gap-2">
+              <input
+                type="date"
+                value={dateRange.startDate}
+                onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500"
+              />
+              <input
+                type="date"
+                value={dateRange.endDate}
+                onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500"
+              />
               <button
-                onClick={() => {
-                  console.log('Refreshing advanced reports data...');
-                  fetchReportData();
-                }}
-                disabled={refreshing}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-                title="Refresh reports data"
+                onClick={fetchAllReports}
+                className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
               >
-                <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw className="w-4 h-4" />
                 Refresh
               </button>
-              
-              {/* Settings */}
-              <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
-                <Settings className="w-5 h-5" />
-              </button>
             </div>
           </div>
-        </div>
-      </div>
+        </motion.div>
 
-      <div className="p-6">
-        {/* Navigation Tabs */}
-        <div className="flex space-x-1 mb-6 bg-white rounded-lg p-1 shadow-sm">
-          {['overview', 'sales', 'inventory', 'financial', 'performance', 'export'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                activeTab === tab
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-            >
-              {tab ? tab.charAt(0).toUpperCase() + tab.slice(1) : 'Tab'}
-            </button>
-          ))}
-        </div>
+        {/* Tabs */}
+        <div className="bg-white rounded-xl shadow-lg mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="flex flex-wrap -mb-px">
+              {['overview', 'sales', 'purchases', 'products', 'suppliers', 'customers', 'profit'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-6 py-4 text-sm font-medium border-b-2 transition-colors capitalize ${
+                    activeTab === tab
+                      ? 'border-primary-600 text-primary-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </nav>
+          </div>
 
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
-          <div className="space-y-6">
-            {/* Key Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <MetricCard
-                title="Total Revenue"
-                value={reportData.overview.totalRevenue}
-                change={reportData.overview.growthRate}
-                icon={DollarSign}
-                color="green"
-                format="currency"
-                onClick={() => console.log('View detailed revenue report')}
-              />
-              <MetricCard
-                title="Total Profit"
-                value={reportData.overview.totalProfit}
-                change={12.5}
-                icon={TrendingUp}
-                color="blue"
-                format="currency"
-                onClick={() => console.log('View detailed profit report')}
-              />
-              <MetricCard
-                title="Total Orders"
-                value={reportData.overview.totalOrders}
-                change={8.3}
-                icon={Package}
-                color="purple"
-                format="number"
-                onClick={() => window.location.href = '/sales'}
-              />
-              <MetricCard
-                title="Profit Margin"
-                value={reportData.overview.profitMargin}
-                change={2.1}
-                icon={Target}
-                color="orange"
-                format="percentage"
-                onClick={() => console.log('View detailed profit margin analysis')}
-              />
-            </div>
+          <div className="p-6">
+            {/* Overview Tab */}
+            {activeTab === 'overview' && overviewData && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <DollarSign className="w-8 h-8 text-blue-600" />
+                      <TrendingUp className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <p className="text-sm text-gray-600 mb-1">Total Revenue</p>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(overviewData.totalSales)}</p>
+                    <p className="text-xs text-gray-500 mt-2">{overviewData.salesCount} orders</p>
+                  </div>
 
-            {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Revenue Trend */}
-              <ChartCard title="Revenue Trend">
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={reportData.sales.dailySales}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Area type="monotone" dataKey="revenue" stroke="#10B981" fill="#10B981" fillOpacity={0.3} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </ChartCard>
+                  <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-6 border border-red-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <ShoppingCart className="w-8 h-8 text-red-600" />
+                      <TrendingDown className="w-6 h-6 text-red-600" />
+                    </div>
+                    <p className="text-sm text-gray-600 mb-1">Total Expenses</p>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(overviewData.totalPurchases)}</p>
+                    <p className="text-xs text-gray-500 mt-2">{overviewData.purchaseCount} orders</p>
+                  </div>
 
-              {/* Sales by Category */}
-              <ChartCard title="Sales by Category">
-                <ResponsiveContainer width="100%" height={300}>
-                  <RechartsPieChart>
-                    <Pie
-                      data={reportData.sales.salesByCategory}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ category, percentage }) => `${category} ${percentage}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="revenue"
-                    >
-                      {reportData.sales.salesByCategory.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'][index % 5]} />
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 border border-green-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <TrendingUp className="w-8 h-8 text-green-600" />
+                      <ArrowUp className="w-6 h-6 text-green-600" />
+                    </div>
+                    <p className="text-sm text-gray-600 mb-1">Net Profit</p>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(overviewData.totalProfit)}</p>
+                    <p className="text-xs text-gray-500 mt-2">{overviewData.profitMargin.toFixed(2)}% margin</p>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-6 border border-purple-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <Package className="w-8 h-8 text-purple-600" />
+                      <BarChart3 className="w-6 h-6 text-purple-600" />
+                    </div>
+                    <p className="text-sm text-gray-600 mb-1">Avg Order Value</p>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(overviewData.avgOrderValue)}</p>
+                    <p className="text-xs text-gray-500 mt-2">Per transaction</p>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Performance Indicators</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white rounded-lg p-4">
+                      <p className="text-sm text-gray-600">Profit Margin</p>
+                      <p className="text-2xl font-bold text-green-600">{overviewData.profitMargin.toFixed(2)}%</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-4">
+                      <p className="text-sm text-gray-600">Total Products</p>
+                      <p className="text-2xl font-bold text-blue-600">{overviewData.productCount}</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-4">
+                      <p className="text-sm text-gray-600">Total Orders</p>
+                      <p className="text-2xl font-bold text-purple-600">{overviewData.salesCount + overviewData.purchaseCount}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Sales Analytics Tab */}
+            {activeTab === 'sales' && salesAnalytics && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white rounded-lg p-6 border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Sales by Status</h3>
+                    <div className="space-y-3">
+                      {Object.entries(salesAnalytics.salesByStatus).map(([status, count]) => (
+                        <div key={status} className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600 capitalize">{status.replace('_', ' ')}</span>
+                          <span className="text-sm font-semibold text-gray-900">{count} orders</span>
+                        </div>
                       ))}
-                    </Pie>
-                    <Tooltip />
-                  </RechartsPieChart>
-                </ResponsiveContainer>
-              </ChartCard>
-            </div>
+                    </div>
+                  </div>
 
-            {/* Top Products */}
-            <ChartCard title="Top Performing Products">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={reportData.sales.topProducts.slice(0, 8)}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="revenue" fill="#3B82F6" />
-                  <Bar dataKey="profit" fill="#10B981" />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartCard>
-          </div>
-        )}
-
-        {/* Sales Tab */}
-        {activeTab === 'sales' && (
-          <div className="space-y-6">
-            {/* Sales Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <MetricCard
-                title="Average Order Value"
-                value={reportData.overview.averageOrderValue}
-                change={5.2}
-                icon={ShoppingCart}
-                color="blue"
-                format="currency"
-              />
-              <MetricCard
-                title="Return Rate"
-                value={reportData.overview.returnRate}
-                change={-1.2}
-                icon={RotateCcw}
-                color="orange"
-                format="percentage"
-              />
-              <MetricCard
-                title="Growth Rate"
-                value={reportData.overview.growthRate}
-                change={2.8}
-                icon={TrendingUp}
-                color="green"
-                format="percentage"
-              />
-            </div>
-
-            {/* Sales Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ChartCard title="Daily Sales Performance">
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={reportData.sales.dailySales}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={2} />
-                    <Line type="monotone" dataKey="profit" stroke="#10B981" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartCard>
-
-              <ChartCard title="Weekly Sales Comparison">
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={reportData.sales.weeklySales.slice(-8)}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="week" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="revenue" fill="#3B82F6" />
-                    <Bar dataKey="orders" fill="#10B981" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartCard>
-            </div>
-
-            {/* Warehouse Performance */}
-            <ChartCard title="Sales by Warehouse">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={reportData.sales.salesByWarehouse}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="warehouse" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="revenue" fill="#3B82F6" />
-                  <Bar dataKey="sales" fill="#10B981" />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartCard>
-          </div>
-        )}
-
-        {/* Inventory Tab */}
-        {activeTab === 'inventory' && (
-          <div className="space-y-6">
-            {/* Inventory Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <MetricCard
-                title="Total Products"
-                value={reportData.overview.totalProducts}
-                icon={Package}
-                color="blue"
-                format="number"
-              />
-              <MetricCard
-                title="Low Stock Items"
-                value={reportData.inventory.lowStockProducts.length}
-                icon={AlertTriangle}
-                color="orange"
-                format="number"
-              />
-              <MetricCard
-                title="Out of Stock"
-                value={reportData.inventory.outOfStockProducts.length}
-                icon={XCircle}
-                color="red"
-                format="number"
-              />
-              <MetricCard
-                title="Fast Moving"
-                value={reportData.inventory.fastMovingProducts.length}
-                icon={Zap}
-                color="green"
-                format="number"
-              />
-            </div>
-
-            {/* Warehouse Utilization */}
-            <ChartCard title="Warehouse Utilization">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={reportData.inventory.warehouseUtilization}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="warehouse" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="utilization" fill="#3B82F6" />
-                  <Bar dataKey="efficiency" fill="#10B981" />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartCard>
-          </div>
-        )}
-
-        {/* Financial Tab */}
-        {activeTab === 'financial' && (
-          <div className="space-y-6">
-            {/* Financial Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <MetricCard
-                title="Monthly Revenue"
-                value={reportData.financial.revenue[reportData.financial.revenue.length - 1]?.revenue || 0}
-                change={12.5}
-                icon={DollarSign}
-                color="green"
-                format="currency"
-              />
-              <MetricCard
-                title="Monthly Profit"
-                value={reportData.financial.profit[reportData.financial.profit.length - 1]?.profit || 0}
-                change={8.9}
-                icon={TrendingUp}
-                color="blue"
-                format="currency"
-              />
-              <MetricCard
-                title="Profit Margin"
-                value={reportData.overview.profitMargin}
-                change={2.1}
-                icon={Target}
-                color="purple"
-                format="percentage"
-              />
-            </div>
-
-            {/* Financial Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ChartCard title="Monthly Financial Performance">
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={reportData.financial.revenue}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Area type="monotone" dataKey="revenue" stackId="1" stroke="#3B82F6" fill="#3B82F6" />
-                    <Area type="monotone" dataKey="profit" stackId="1" stroke="#10B981" fill="#10B981" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </ChartCard>
-
-              <ChartCard title="Profit Margin Trend">
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={reportData.financial.revenue}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartCard>
-            </div>
-          </div>
-        )}
-
-        {/* Performance Tab */}
-        {activeTab === 'performance' && (
-          <div className="space-y-6">
-            {/* Performance Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <MetricCard
-                title="System Uptime"
-                value={99.8}
-                change={0.2}
-                icon={CheckCircle}
-                color="green"
-                format="percentage"
-                onClick={() => console.log('View detailed uptime report')}
-              />
-              <MetricCard
-                title="Response Time"
-                value={245}
-                change={-12}
-                icon={Timer}
-                color="blue"
-                format="number"
-                onClick={() => console.log('View response time analysis')}
-              />
-              <MetricCard
-                title="Error Rate"
-                value={0.3}
-                change={-0.1}
-                icon={AlertTriangle}
-                color="orange"
-                format="percentage"
-                onClick={() => console.log('View error rate details')}
-              />
-              <MetricCard
-                title="Throughput"
-                value={1250}
-                change={8.5}
-                icon={TrendingUp}
-                color="purple"
-                format="number"
-                onClick={() => console.log('View throughput metrics')}
-              />
-            </div>
-
-            {/* Performance Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ChartCard title="System Performance Over Time">
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={[
-                    { time: '00:00', uptime: 99.9, response: 200 },
-                    { time: '04:00', uptime: 99.8, response: 220 },
-                    { time: '08:00', uptime: 99.7, response: 250 },
-                    { time: '12:00', uptime: 99.9, response: 240 },
-                    { time: '16:00', uptime: 99.8, response: 260 },
-                    { time: '20:00', uptime: 99.9, response: 230 }
-                  ]}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="time" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="uptime" stroke="#10B981" strokeWidth={2} />
-                    <Line type="monotone" dataKey="response" stroke="#3B82F6" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartCard>
-
-              <ChartCard title="Error Rate Analysis">
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={[
-                    { day: 'Mon', errors: 12, requests: 5000 },
-                    { day: 'Tue', errors: 8, requests: 5200 },
-                    { day: 'Wed', errors: 15, requests: 4800 },
-                    { day: 'Thu', errors: 6, requests: 5500 },
-                    { day: 'Fri', errors: 9, requests: 5100 },
-                    { day: 'Sat', errors: 4, requests: 3000 },
-                    { day: 'Sun', errors: 3, requests: 2800 }
-                  ]}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="day" />
-                    <YAxis />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="errors" stackId="1" stroke="#EF4444" fill="#FEE2E2" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </ChartCard>
-            </div>
-
-            {/* Performance Tables */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ChartCard title="Top Performing Endpoints">
-                <div className="space-y-3">
-                  {[
-                    { endpoint: '/api/products', avgTime: 45, requests: 1250, success: 99.2 },
-                    { endpoint: '/api/sales', avgTime: 67, requests: 890, success: 98.8 },
-                    { endpoint: '/api/purchases', avgTime: 52, requests: 750, success: 99.1 },
-                    { endpoint: '/api/warehouses', avgTime: 38, requests: 650, success: 99.5 },
-                    { endpoint: '/api/reports', avgTime: 89, requests: 420, success: 97.9 }
-                  ].map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="bg-white rounded-lg p-6 border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Sales Metrics</h3>
+                    <div className="space-y-4">
                       <div>
-                        <p className="font-medium text-gray-900">{item.endpoint}</p>
-                        <p className="text-sm text-gray-500">{item.requests} requests</p>
+                        <p className="text-sm text-gray-600">Total Orders</p>
+                        <p className="text-2xl font-bold text-gray-900">{salesAnalytics.totalOrders}</p>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium text-gray-900">{item.avgTime}ms</p>
-                        <p className="text-sm text-green-600">{item.success}% success</p>
+                      <div>
+                        <p className="text-sm text-gray-600">Average Order Value</p>
+                        <p className="text-2xl font-bold text-primary-600">{formatCurrency(salesAnalytics.averageOrderValue)}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </ChartCard>
-
-              <ChartCard title="Resource Utilization">
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={[
-                    { resource: 'CPU', usage: 45, capacity: 100 },
-                    { resource: 'Memory', usage: 67, capacity: 100 },
-                    { resource: 'Disk', usage: 23, capacity: 100 },
-                    { resource: 'Network', usage: 34, capacity: 100 }
-                  ]}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="resource" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="usage" fill="#3B82F6" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartCard>
-            </div>
-
-            {/* Performance Alerts */}
-            <ChartCard title="Performance Alerts">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <AlertTriangle className="w-5 h-5 text-red-500" />
-                    <div>
-                      <p className="font-medium text-red-900">High Response Time</p>
-                      <p className="text-sm text-red-700">API response time exceeded 500ms threshold</p>
-                    </div>
                   </div>
-                  <span className="text-sm text-red-600">2 hours ago</span>
-                </div>
-                
-                <div className="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <AlertTriangle className="w-5 h-5 text-yellow-500" />
-                    <div>
-                      <p className="font-medium text-yellow-900">Memory Usage High</p>
-                      <p className="text-sm text-yellow-700">Memory usage at 85% of capacity</p>
-                    </div>
-                  </div>
-                  <span className="text-sm text-yellow-600">4 hours ago</span>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                    <div>
-                      <p className="font-medium text-green-900">System Optimized</p>
-                      <p className="text-sm text-green-700">All performance metrics within normal range</p>
-                    </div>
-                  </div>
-                  <span className="text-sm text-green-600">6 hours ago</span>
                 </div>
               </div>
-            </ChartCard>
-          </div>
-        )}
+            )}
 
-        {/* Export Tab */}
-        {activeTab === 'export' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Export Reports</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[
-                  { name: 'Sales Report', format: 'PDF', icon: FileText },
-                  { name: 'Inventory Report', format: 'Excel', icon: Package },
-                  { name: 'Financial Report', format: 'PDF', icon: DollarSign },
-                  { name: 'User Activity', format: 'CSV', icon: Users },
-                  { name: 'Performance Metrics', format: 'PDF', icon: BarChart3 },
-                  { name: 'Custom Report', format: 'Multiple', icon: Settings }
-                ].map((report, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-gray-900">{report.name}</h4>
-                      <report.icon className="w-5 h-5 text-gray-400" />
+            {/* Purchase Analytics Tab */}
+            {activeTab === 'purchases' && purchaseAnalytics && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white rounded-lg p-6 border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Purchases by Payment Method</h3>
+                    <div className="space-y-3">
+                      {Object.entries(purchaseAnalytics.byPaymentMethod).map(([method, count]) => (
+                        <div key={method} className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600 capitalize">{method.replace('_', ' ')}</span>
+                          <span className="text-sm font-semibold text-gray-900">{count}</span>
+                        </div>
+                      ))}
                     </div>
-                    <p className="text-sm text-gray-500 mb-3">{report.format} format</p>
-                    <button className="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
-                      Download
-                    </button>
-                  </motion.div>
-                ))}
+                  </div>
+
+                  <div className="bg-white rounded-lg p-6 border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Status</h3>
+                    <div className="space-y-3">
+                      {Object.entries(purchaseAnalytics.byPaymentStatus).map(([status, count]) => (
+                        <div key={status} className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600 capitalize">{status}</span>
+                          <span className="text-sm font-semibold text-gray-900">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Purchase Summary</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Total Cost</p>
+                      <p className="text-2xl font-bold text-red-600">{formatCurrency(purchaseAnalytics.totalCost)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Total Orders</p>
+                      <p className="text-2xl font-bold text-gray-900">{purchaseAnalytics.purchaseCount}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Average Value</p>
+                      <p className="text-2xl font-bold text-blue-600">{formatCurrency(purchaseAnalytics.averagePurchaseValue)}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
+
+            {/* Product Performance Tab */}
+            {activeTab === 'products' && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900">Top Performing Products</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantity Sold</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Orders</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {productPerformance.map((product, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              #{index + 1}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.name}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.quantity}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.orders}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
+                              {formatCurrency(product.revenue)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Supplier Analytics Tab */}
+            {activeTab === 'suppliers' && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900">Supplier Performance</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supplier</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Orders</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Purchases</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {supplierAnalytics.map((supplier, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              #{index + 1}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{supplier.name}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{supplier.orderCount}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-blue-600">
+                              {formatCurrency(supplier.totalPurchases)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Customer Analytics Tab */}
+            {activeTab === 'customers' && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900">Top Customers</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rank</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Orders</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Spent</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {customerAnalytics.map((customer, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              #{index + 1}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{customer.name}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{customer.orderCount}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">
+                              {formatCurrency(customer.totalSpent)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Profit Analysis Tab */}
+            {activeTab === 'profit' && profitAnalysis && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-6 border border-green-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Analysis</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Total Revenue</p>
+                        <p className="text-3xl font-bold text-green-600">{formatCurrency(profitAnalysis.totalRevenue)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Growth Rate</p>
+                        <p className="text-2xl font-bold text-gray-900">{profitAnalysis.revenueGrowth.toFixed(2)}%</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-6 border border-red-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Analysis</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm text-gray-600">Total Cost</p>
+                        <p className="text-3xl font-bold text-red-600">{formatCurrency(profitAnalysis.totalCost)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Cost Growth</p>
+                        <p className="text-2xl font-bold text-gray-900">{profitAnalysis.costGrowth.toFixed(2)}%</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Profit Summary</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Gross Profit</p>
+                      <p className={`text-4xl font-bold ${profitAnalysis.grossProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(profitAnalysis.grossProfit)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Profit Margin</p>
+                      <p className={`text-4xl font-bold ${profitAnalysis.profitMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {profitAnalysis.profitMargin.toFixed(2)}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

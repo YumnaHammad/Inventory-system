@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import {
   Package,
   Warehouse,
@@ -11,20 +12,31 @@ import {
   AlertTriangle,
   DollarSign,
   Activity,
-  Eye
+  Eye,
+  Plus,
+  Users,
+  Clock,
+  CheckCircle,
+  XCircle,
+  ArrowRight
 } from 'lucide-react';
 import api from '../../services/api';
 
 const ManagerDashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalWarehouses: 0,
     totalSales: 0,
     totalPurchases: 0,
     lowStockProducts: 0,
-    monthlyRevenue: 0,
-    pendingOrders: 0
+    pendingOrders: 0,
+    todaySales: 0,
+    todayPurchases: 0
   });
+  const [recentSales, setRecentSales] = useState([]);
+  const [recentPurchases, setRecentPurchases] = useState([]);
+  const [lowStockItems, setLowStockItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,6 +46,8 @@ const ManagerDashboard = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      console.log('Fetching dashboard data...');
+      
       // Fetch data accessible to managers
       const [productsRes, warehousesRes, salesRes, purchasesRes] = await Promise.all([
         api.get('/products'),
@@ -42,28 +56,65 @@ const ManagerDashboard = () => {
         api.get('/purchases')
       ]);
 
+      console.log('API Responses:', { productsRes, warehousesRes, salesRes, purchasesRes });
+
       const products = productsRes.data.products || productsRes.data || [];
       const warehouses = warehousesRes.data.warehouses || warehousesRes.data || [];
       const sales = salesRes.data.sales || salesRes.data || [];
       const purchases = purchasesRes.data.purchases || purchasesRes.data || [];
 
-      // Calculate low stock products
-      const lowStockProducts = products.filter(p => p.currentStock <= 5).length;
+      console.log('Extracted data:', { products, warehouses, sales, purchases });
 
-      // Calculate monthly revenue
-      const monthlyRevenue = sales.reduce((sum, sale) => sum + (sale.totalAmount || 0), 0);
+      // Calculate today's sales and purchases
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const todaySales = sales.filter(sale => {
+        const saleDate = new Date(sale.createdAt);
+        return saleDate >= today;
+      });
+
+      const todayPurchases = purchases.filter(purchase => {
+        const purchaseDate = new Date(purchase.createdAt);
+        return purchaseDate >= today;
+      });
+
+      // Calculate low stock products
+      const lowStockProducts = products.filter(p => p.currentStock <= 5);
+
+      // Get recent sales and purchases (last 5)
+      const recentSalesData = sales.slice(0, 5);
+      const recentPurchasesData = purchases.slice(0, 5);
 
       setStats({
         totalProducts: products.length,
         totalWarehouses: warehouses.length,
         totalSales: sales.length,
         totalPurchases: purchases.length,
-        lowStockProducts,
-        monthlyRevenue,
-        pendingOrders: 5 // Mock data
+        lowStockProducts: lowStockProducts.length,
+        pendingOrders: sales.filter(s => s.status === 'pending').length,
+        todaySales: todaySales.length,
+        todayPurchases: todayPurchases.length
       });
+
+      setRecentSales(recentSalesData);
+      setRecentPurchases(recentPurchasesData);
+      setLowStockItems(lowStockProducts.slice(0, 5));
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      console.error('Error details:', error.response?.data || error.message);
+      
+      // Set some default data if API fails
+      setStats({
+        totalProducts: 0,
+        totalWarehouses: 0,
+        totalSales: 0,
+        totalPurchases: 0,
+        lowStockProducts: 0,
+        pendingOrders: 0,
+        todaySales: 0,
+        todayPurchases: 0
+      });
     } finally {
       setLoading(false);
     }
@@ -75,8 +126,9 @@ const ManagerDashboard = () => {
       value: stats.totalProducts,
       icon: Package,
       color: 'blue',
-      change: '+8%',
-      changeType: 'positive'
+      change: '+2',
+      changeType: 'positive',
+      onClick: () => navigate('/products')
     },
     {
       title: 'Warehouses',
@@ -84,41 +136,95 @@ const ManagerDashboard = () => {
       icon: Warehouse,
       color: 'purple',
       change: '+1',
-      changeType: 'positive'
+      changeType: 'positive',
+      onClick: () => navigate('/warehouses')
     },
     {
       title: 'Low Stock Alert',
       value: stats.lowStockProducts,
       icon: AlertTriangle,
       color: 'red',
-      change: '-2',
-      changeType: 'negative'
+      change: '-1',
+      changeType: 'negative',
+      onClick: () => navigate('/products')
     },
     {
-      title: 'Monthly Revenue',
-      value: `PKR ${stats.monthlyRevenue.toLocaleString()}`,
-      icon: DollarSign,
-      color: 'emerald',
-      change: '+10%',
-      changeType: 'positive'
-    },
-    {
-      title: 'Total Sales',
-      value: stats.totalSales,
+      title: 'Today\'s Sales',
+      value: stats.todaySales,
       icon: Truck,
-      color: 'indigo',
-      change: '+12%',
-      changeType: 'positive'
+      color: 'green',
+      change: '+3',
+      changeType: 'positive',
+      onClick: () => navigate('/sales')
+    },
+    {
+      title: 'Today\'s Purchases',
+      value: stats.todayPurchases,
+      icon: ShoppingCart,
+      color: 'orange',
+      change: '+2',
+      changeType: 'positive',
+      onClick: () => navigate('/purchases')
     },
     {
       title: 'Pending Orders',
       value: stats.pendingOrders,
-      icon: ShoppingCart,
-      color: 'orange',
-      change: '+3',
-      changeType: 'negative'
+      icon: Clock,
+      color: 'yellow',
+      change: '+1',
+      changeType: 'negative',
+      onClick: () => navigate('/sales')
     }
   ];
+
+  const quickActions = [
+    {
+      title: 'New Sale',
+      description: 'Create a new sales order',
+      icon: Truck,
+      color: 'green',
+      onClick: () => navigate('/sales/new')
+    },
+    {
+      title: 'New Purchase',
+      description: 'Create a new purchase order',
+      icon: ShoppingCart,
+      color: 'blue',
+      onClick: () => navigate('/purchases/new')
+    },
+    {
+      title: 'Manage Products',
+      description: 'Add or edit products',
+      icon: Package,
+      color: 'purple',
+      onClick: () => navigate('/products')
+    },
+    {
+      title: 'View Reports',
+      description: 'Check sales and inventory reports',
+      icon: BarChart3,
+      color: 'indigo',
+      onClick: () => navigate('/reports')
+    }
+  ];
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'completed': return 'text-green-600 bg-green-100';
+      case 'pending': return 'text-yellow-600 bg-yellow-100';
+      case 'cancelled': return 'text-red-600 bg-red-100';
+      default: return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'completed': return <CheckCircle className="w-4 h-4" />;
+      case 'pending': return <Clock className="w-4 h-4" />;
+      case 'cancelled': return <XCircle className="w-4 h-4" />;
+      default: return <Activity className="w-4 h-4" />;
+    }
+  };
 
   if (loading) {
     return (
@@ -129,12 +235,12 @@ const ManagerDashboard = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Manager Dashboard</h1>
-          <p className="text-gray-600 mt-2">Inventory and operations management</p>
+          <h1 className="text-3xl font-bold text-gray-900">Operations Dashboard</h1>
+          <p className="text-gray-600 mt-2">Manage sales, purchases, and inventory operations</p>
         </div>
         <div className="flex items-center space-x-2">
           <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -150,7 +256,8 @@ const ManagerDashboard = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300"
+            onClick={stat.onClick}
+            className="bg-white rounded-xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300 cursor-pointer group"
           >
             <div className="flex items-center justify-between">
               <div>
@@ -169,7 +276,7 @@ const ManagerDashboard = () => {
                   </span>
                 </div>
               </div>
-              <div className={`p-3 rounded-xl bg-${stat.color}-100`}>
+              <div className={`p-3 rounded-xl bg-${stat.color}-100 group-hover:scale-110 transition-transform`}>
                 <stat.icon className={`h-8 w-8 text-${stat.color}-600`} />
               </div>
             </div>
@@ -178,61 +285,178 @@ const ManagerDashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+      <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
         <h3 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <button className="p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group">
-            <Package className="h-8 w-8 text-blue-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-sm font-medium text-gray-700">Manage Products</span>
-          </button>
-          <button className="p-4 rounded-xl border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all duration-200 group">
-            <Warehouse className="h-8 w-8 text-purple-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-sm font-medium text-gray-700">Warehouse Status</span>
-          </button>
-          <button className="p-4 rounded-xl border border-gray-200 hover:border-orange-300 hover:bg-orange-50 transition-all duration-200 group">
-            <ShoppingCart className="h-8 w-8 text-orange-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-sm font-medium text-gray-700">Process Orders</span>
-          </button>
-          <button className="p-4 rounded-xl border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all duration-200 group">
-            <BarChart3 className="h-8 w-8 text-indigo-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-            <span className="text-sm font-medium text-gray-700">View Reports</span>
-          </button>
+          {quickActions.map((action, index) => (
+            <motion.button
+              key={action.title}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.1 }}
+              onClick={action.onClick}
+              className="p-6 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group text-left"
+            >
+              <div className={`p-3 rounded-lg bg-${action.color}-100 mb-4 inline-block`}>
+                <action.icon className={`h-6 w-6 text-${action.color}-600`} />
+              </div>
+              <h4 className="text-lg font-semibold text-gray-900 mb-2">{action.title}</h4>
+              <p className="text-sm text-gray-600 mb-3">{action.description}</p>
+              <div className="flex items-center text-blue-600 group-hover:text-blue-800">
+                <span className="text-sm font-medium">Get Started</span>
+                <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </motion.button>
+          ))}
         </div>
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-        <h3 className="text-xl font-semibold text-gray-900 mb-6">Recent Operations</h3>
-        <div className="space-y-4">
-          <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Activity className="h-5 w-5 text-blue-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">Stock updated for Product A</p>
-              <p className="text-xs text-gray-500">5 minutes ago</p>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Sales */}
+        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold text-gray-900">Recent Sales</h3>
+            <button 
+              onClick={() => navigate('/sales')}
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center"
+            >
+              View All
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </button>
           </div>
-          <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Truck className="h-5 w-5 text-green-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">New sale completed</p>
-              <p className="text-xs text-gray-500">1 hour ago</p>
-            </div>
+          <div className="space-y-4">
+            {recentSales.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">No recent sales</p>
+            ) : (
+              recentSales.map((sale, index) => (
+                <motion.div
+                  key={sale._id || index}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <Truck className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        Sale #{sale.orderNumber || sale._id?.slice(-6)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {sale.customerName || sale.customerInfo?.name || 'Unknown Customer'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(sale.status)}`}>
+                      {getStatusIcon(sale.status)}
+                      <span className="ml-1">{sale.status || 'pending'}</span>
+                    </span>
+                    <span className="text-sm font-medium text-gray-900">
+                      PKR {sale.totalAmount?.toLocaleString() || '0'}
+                    </span>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </div>
-          <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">Low stock alert - Product B</p>
-              <p className="text-xs text-gray-500">2 hours ago</p>
-            </div>
+        </div>
+
+        {/* Recent Purchases */}
+        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold text-gray-900">Recent Purchases</h3>
+            <button 
+              onClick={() => navigate('/purchases')}
+              className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center"
+            >
+              View All
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </button>
+          </div>
+          <div className="space-y-4">
+            {recentPurchases.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">No recent purchases</p>
+            ) : (
+              recentPurchases.map((purchase, index) => (
+                <motion.div
+                  key={purchase._id || index}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <ShoppingCart className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        Purchase #{purchase.purchaseNumber || purchase._id?.slice(-6)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {purchase.supplierName || purchase.supplier?.name || 'Unknown Supplier'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(purchase.status)}`}>
+                      {getStatusIcon(purchase.status)}
+                      <span className="ml-1">{purchase.status || 'pending'}</span>
+                    </span>
+                    <span className="text-sm font-medium text-gray-900">
+                      PKR {purchase.totalAmount?.toLocaleString() || '0'}
+                    </span>
+                  </div>
+                </motion.div>
+              ))
+            )}
           </div>
         </div>
       </div>
+
+      {/* Low Stock Alert */}
+      {lowStockItems.length > 0 && (
+        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold text-gray-900">Low Stock Alert</h3>
+            <button 
+              onClick={() => navigate('/products')}
+              className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center"
+            >
+              Manage Stock
+              <ArrowRight className="w-4 h-4 ml-1" />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {lowStockItems.map((item, index) => (
+              <motion.div
+                key={item._id || index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="p-4 bg-red-50 border border-red-200 rounded-lg"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900">{item.name}</p>
+                    <p className="text-xs text-gray-500">SKU: {item.sku}</p>
+                    <p className="text-sm text-red-600 font-medium">
+                      Stock: {item.currentStock || 0} units
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

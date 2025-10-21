@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../contexts/AuthContext';
 import {
   BarChart3,
   FileText,
@@ -17,12 +18,14 @@ import {
   Truck,
   RotateCcw,
   Warehouse,
-  DollarSign
+  DollarSign,
+  MapPin
 } from 'lucide-react';
 import api from '../services/api';
 import { BarChart, PieChart } from '../components/charts';
 
 const Reports = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(false);
   const [dashboardSummary, setDashboardSummary] = useState(null);
@@ -141,6 +144,12 @@ const Reports = () => {
       case 'return-analysis':
         if (!returnAnalysis) fetchReturnAnalysis();
         break;
+      case 'city-reports':
+        // City reports will be handled by navigation to the city reports page
+        break;
+      case 'advanced-reports':
+        // Advanced reports will be handled by navigation to the advanced reports page
+        break;
       default:
         break;
     }
@@ -152,7 +161,10 @@ const Reports = () => {
     { id: 'monthly-sales', label: 'Monthly Sales', icon: DollarSign },
     { id: 'monthly-inventory', label: 'Monthly Inventory', icon: Package },
     { id: 'supplier-performance', label: 'Supplier Performance', icon: Truck },
-    { id: 'return-analysis', label: 'Return Analysis', icon: RotateCcw }
+    { id: 'return-analysis', label: 'Return Analysis', icon: RotateCcw },
+    { id: 'city-reports', label: 'City Reports', icon: MapPin },
+    // Only show advanced reports for admin
+    ...(user?.role === 'admin' ? [{ id: 'advanced-reports', label: 'Advanced Reports', icon: TrendingUp }] : [])
   ];
 
   const renderDashboardReport = () => {
@@ -317,15 +329,17 @@ const Reports = () => {
       <div className="space-y-4 lg:space-y-6">
         {/* Summary */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-          <div className="card p-4 lg:p-6">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">PKR {(weeklySales.summary?.totalRevenue || 0).toLocaleString()}</p>
+          {user?.role === 'admin' && (
+            <div className="card p-4 lg:p-6">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Total Revenue</p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">PKR {(weeklySales.summary?.totalRevenue || 0).toLocaleString()}</p>
+                </div>
+                <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600 flex-shrink-0" />
               </div>
-              <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600 flex-shrink-0" />
             </div>
-          </div>
+          )}
 
           <div className="card p-4 lg:p-6">
             <div className="flex items-center justify-between">
@@ -495,15 +509,17 @@ const Reports = () => {
       <div className="space-y-4 lg:space-y-6">
         {/* Summary */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-          <div className="card p-4 lg:p-6">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">PKR {(monthlySales.summary.totalRevenue || 0).toLocaleString()}</p>
+          {user?.role === 'admin' && (
+            <div className="card p-4 lg:p-6">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Total Revenue</p>
+                  <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">PKR {(monthlySales.summary.totalRevenue || 0).toLocaleString()}</p>
+                </div>
+                <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600 flex-shrink-0" />
               </div>
-              <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600 flex-shrink-0" />
             </div>
-          </div>
+          )}
 
           <div className="card p-4 lg:p-6">
             <div className="flex items-center justify-between">
@@ -655,37 +671,43 @@ const Reports = () => {
             </div>
           </div>
 
-          <div className="card p-4 lg:p-6">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-gray-600">Opening Value</p>
-                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">PKR {(monthlyInventory.summary.totalOpeningValue || 0).toLocaleString()}</p>
+          {user?.role === 'admin' && (
+            <>
+              <div className="card p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Opening Value</p>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">PKR {(monthlyInventory.summary.totalOpeningValue || 0).toLocaleString()}</p>
+                  </div>
+                  <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 flex-shrink-0" />
+                </div>
               </div>
-              <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 flex-shrink-0" />
-            </div>
-          </div>
 
-          <div className="card p-4 lg:p-6">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-gray-600">Closing Value</p>
-                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">PKR {(monthlyInventory.summary.totalClosingValue || 0).toLocaleString()}</p>
+              <div className="card p-4 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-gray-600">Closing Value</p>
+                    <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">PKR {(monthlyInventory.summary.totalClosingValue || 0).toLocaleString()}</p>
+                  </div>
+                  <TrendingDown className="w-6 h-6 sm:w-8 sm:h-8 text-red-600 flex-shrink-0" />
+                </div>
               </div>
-              <TrendingDown className="w-6 h-6 sm:w-8 sm:h-8 text-red-600 flex-shrink-0" />
-            </div>
-          </div>
+            </>
+          )}
 
-          <div className="card p-4 lg:p-6">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-gray-600">Net Change</p>
-                <p className={`text-lg sm:text-xl lg:text-2xl font-bold truncate ${(monthlyInventory.summary.netChange || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {(monthlyInventory.summary.netChange || 0) >= 0 ? '+' : ''}{monthlyInventory.summary.netChange || 0}
-                </p>
+          {user?.role === 'admin' && (
+            <div className="card p-4 lg:p-6">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Net Change</p>
+                  <p className={`text-lg sm:text-xl lg:text-2xl font-bold truncate ${(monthlyInventory.summary.netChange || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {(monthlyInventory.summary.netChange || 0) >= 0 ? '+' : ''}{monthlyInventory.summary.netChange || 0}
+                  </p>
+                </div>
+                <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 flex-shrink-0" />
               </div>
-              <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600 flex-shrink-0" />
             </div>
-          </div>
+          )}
         </div>
 
         {/* Inventory Table */}
@@ -752,15 +774,17 @@ const Reports = () => {
             </div>
             </div>
 
-          <div className="card p-6">
-            <div className="flex items-center justify-between">
-            <div>
-                <p className="text-sm font-medium text-gray-600">Total Amount</p>
-                <p className="text-2xl font-bold text-gray-900">PKR {(supplierPerformance.summary.totalAmount || 0).toLocaleString()}</p>
+          {user?.role === 'admin' && (
+            <div className="card p-6">
+              <div className="flex items-center justify-between">
+              <div>
+                  <p className="text-sm font-medium text-gray-600">Total Amount</p>
+                  <p className="text-2xl font-bold text-gray-900">PKR {(supplierPerformance.summary.totalAmount || 0).toLocaleString()}</p>
+                </div>
+                <DollarSign className="w-8 h-8 text-emerald-600" />
               </div>
-              <DollarSign className="w-8 h-8 text-emerald-600" />
-            </div>
-            </div>
+              </div>
+          )}
           </div>
 
         {/* Supplier Performance Table */}
@@ -772,8 +796,12 @@ const Reports = () => {
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 font-medium text-gray-900">Supplier</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900">Total Purchases</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Total Amount</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Avg Order Value</th>
+                  {user?.role === 'admin' && (
+                    <>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">Total Amount</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-900">Avg Order Value</th>
+                    </>
+                  )}
                   <th className="text-left py-3 px-4 font-medium text-gray-900">Delivery Performance</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900">On-Time Performance</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-900">Rating</th>
@@ -789,8 +817,12 @@ const Reports = () => {
                       </div>
                     </td>
                     <td className="py-3 px-4">{supplier.totalPurchases || 0}</td>
-                    <td className="py-3 px-4">PKR {(supplier.totalAmount || 0).toLocaleString()}</td>
-                    <td className="py-3 px-4">PKR {(supplier.averageOrderValue || 0).toLocaleString()}</td>
+                    {user?.role === 'admin' && (
+                      <>
+                        <td className="py-3 px-4">PKR {(supplier.totalAmount || 0).toLocaleString()}</td>
+                        <td className="py-3 px-4">PKR {(supplier.averageOrderValue || 0).toLocaleString()}</td>
+                      </>
+                    )}
                     <td className="py-3 px-4">
                       <div className="flex items-center">
                         <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
@@ -1003,6 +1035,34 @@ const Reports = () => {
           {activeTab === 'monthly-inventory' && renderMonthlyInventoryReport()}
           {activeTab === 'supplier-performance' && renderSupplierPerformanceReport()}
           {activeTab === 'return-analysis' && renderReturnAnalysisReport()}
+          {activeTab === 'city-reports' && (
+            <div className="text-center py-12">
+              <MapPin className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">City Reports</h3>
+              <p className="text-gray-600 mb-6">Click below to view detailed city-wise reports</p>
+              <a
+                href="/city-reports"
+                className="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              >
+                <MapPin className="w-5 h-5 mr-2" />
+                Go to City Reports
+              </a>
+            </div>
+          )}
+          {activeTab === 'advanced-reports' && (
+            <div className="text-center py-12">
+              <TrendingUp className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Advanced Reports</h3>
+              <p className="text-gray-600 mb-6">Click below to view advanced analytics and reports</p>
+              <a
+                href="/reports/advanced"
+                className="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              >
+                <TrendingUp className="w-5 h-5 mr-2" />
+                Go to Advanced Reports
+              </a>
+            </div>
+          )}
         </motion.div>
       </div>
     </div>

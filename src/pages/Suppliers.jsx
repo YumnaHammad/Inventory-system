@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Building2, Plus, Search, Filter, RefreshCw, Eye, Edit3,
   Star, TrendingUp, DollarSign, Calendar, Clock, CheckCircle, XCircle,
@@ -14,6 +15,7 @@ import toast from 'react-hot-toast';
 import ExportButton from '../components/ExportButton';
 
 const Suppliers = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [suppliers, setSuppliers] = useState([]);
@@ -321,8 +323,15 @@ const Suppliers = () => {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
         {/* Title Section - Full width on mobile */}
         <div className="w-full sm:w-auto">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Suppliers</h1>
-          <p className="text-sm sm:text-base text-gray-600 mt-1">Manage your suppliers and track spending</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            {user?.role === 'admin' ? 'Suppliers' : 'Supplier Directory'}
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
+            {user?.role === 'admin' 
+              ? 'Manage your suppliers and track spending' 
+              : 'View supplier information and contact details'
+            }
+          </p>
         </div>
         
         {/* Controls Section - Full width on mobile */}
@@ -335,18 +344,20 @@ const Suppliers = () => {
             variant="default"
             buttonText="Export"
           />
-          <button
-            onClick={() => navigate('/suppliers/add')}
-            className="btn-primary flex items-center flex-1 sm:flex-initial justify-center"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Supplier
-          </button>
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => navigate('/suppliers/add')}
+              className="btn-primary flex items-center flex-1 sm:flex-initial justify-center"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Supplier
+            </button>
+          )}
         </div>
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+      <div className={`grid grid-cols-1 md:grid-cols-${user?.role === 'admin' ? '5' : '4'} gap-6`}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -397,22 +408,24 @@ const Suppliers = () => {
           </div>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="card p-6"
-        >
-          <div className="flex items-center">
-            <div className="p-3 bg-purple-500 rounded-lg mr-4">
-              <DollarSign className="h-6 w-6 text-white" />
+        {user?.role === 'admin' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="card p-6"
+          >
+            <div className="flex items-center">
+              <div className="p-3 bg-purple-500 rounded-lg mr-4">
+                <DollarSign className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Spent</p>
+                <p className="text-2xl font-bold text-gray-900">PKR {supplierStats.totalSpent?.toLocaleString() || '0'}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Spent</p>
-              <p className="text-2xl font-bold text-gray-900">PKR {supplierStats.totalSpent?.toLocaleString() || '0'}</p>
-            </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -613,20 +626,24 @@ const Suppliers = () => {
                       >
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() => handleEditSupplier(supplier)}
-                        className="text-blue-600 hover:text-blue-900"
-                        title="Edit Supplier"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleViewAnalytics(supplier)}
-                        className="text-purple-600 hover:text-purple-900"
-                        title="View Analytics"
-                      >
-                        <BarChart3 className="w-4 h-4" />
-                      </button>
+                      {user?.role === 'admin' && (
+                        <button
+                          onClick={() => handleEditSupplier(supplier)}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="Edit Supplier"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                      )}
+                      {user?.role === 'admin' && (
+                        <button
+                          onClick={() => handleViewAnalytics(supplier)}
+                          className="text-purple-600 hover:text-purple-900"
+                          title="View Analytics"
+                        >
+                          <BarChart3 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </motion.tr>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Users, UserPlus, Search, Filter, Download, RefreshCw, Eye, Edit3, Trash2,
   Shield, Mail, Phone, MapPin, Calendar, Clock, CheckCircle, XCircle, AlertTriangle,
@@ -20,6 +21,7 @@ import ExportButton from '../components/ExportButton';
 
 const AdvancedUserManagement = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
@@ -448,8 +450,15 @@ const AdvancedUserManagement = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             {/* Title Section - Full width on mobile */}
             <div className="w-full sm:w-auto">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">uUser Management</h1>
-              <p className="text-sm sm:text-base text-gray-600 mt-1">Comprehensive user control and permissions</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                {user?.role === 'admin' ? 'User Management' : 'View Users'}
+              </h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">
+                {user?.role === 'admin' 
+                  ? 'Comprehensive user control and permissions' 
+                  : 'View user information and status'
+                }
+              </p>
             </div>
             
             {/* Controls Section - Full width on mobile */}
@@ -537,13 +546,15 @@ const AdvancedUserManagement = () => {
               </button>
 
               {/* Add User */}
-              <button
-                onClick={() => navigate('/users/new')}
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Add User
-              </button>
+              {user?.role === 'admin' && (
+                <button
+                  onClick={() => navigate('/users/new')}
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                >
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Add User
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -851,20 +862,24 @@ const AdvancedUserManagement = () => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => handleEditUser(user)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Edit User"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteUser(user)}
-                          className="text-red-600 hover:text-red-900"
-                          title="Delete User"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {user?.role === 'admin' && (
+                          <>
+                            <button
+                              onClick={() => handleEditUser(user)}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="Edit User"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(user)}
+                              className="text-red-600 hover:text-red-900"
+                              title="Delete User"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </motion.tr>
@@ -967,26 +982,30 @@ const AdvancedUserManagement = () => {
                   >
                     <Eye className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditUser(user);
-                    }}
-                    className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-100 rounded-lg transition-colors duration-200"
-                    title="Edit User"
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteUser(user);
-                    }}
-                    className="p-2 text-red-600 hover:text-red-900 hover:bg-red-100 rounded-lg transition-colors duration-200"
-                    title="Delete User"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {user?.role === 'admin' && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditUser(user);
+                        }}
+                        className="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-100 rounded-lg transition-colors duration-200"
+                        title="Edit User"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteUser(user);
+                        }}
+                        className="p-2 text-red-600 hover:text-red-900 hover:bg-red-100 rounded-lg transition-colors duration-200"
+                        title="Delete User"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </motion.div>
             ))}
@@ -1090,26 +1109,30 @@ const AdvancedUserManagement = () => {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditUser(user);
-                          }}
-                          className="p-1 text-blue-600 hover:text-blue-900 hover:bg-blue-100 rounded transition-colors duration-200"
-                          title="Edit User"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteUser(user);
-                          }}
-                          className="p-1 text-red-600 hover:text-red-900 hover:bg-red-100 rounded transition-colors duration-200"
-                          title="Delete User"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {user?.role === 'admin' && (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditUser(user);
+                              }}
+                              className="p-1 text-blue-600 hover:text-blue-900 hover:bg-blue-100 rounded transition-colors duration-200"
+                              title="Edit User"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteUser(user);
+                              }}
+                              className="p-1 text-red-600 hover:text-red-900 hover:bg-red-100 rounded transition-colors duration-200"
+                              title="Delete User"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

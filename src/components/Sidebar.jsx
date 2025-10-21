@@ -7,6 +7,7 @@ import {
   Warehouse,
   ShoppingCart,
   Truck,
+  DollarSign,
   BarChart3,
   Settings,
   LogOut,
@@ -16,7 +17,8 @@ import {
   Building2,
   UserCheck,
   X,
-  MapPin
+  MapPin,
+  Users
 } from 'lucide-react';
 
 const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
@@ -46,9 +48,15 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
       baseItems.push(
         { name: 'Purchases', href: '/purchases', icon: ShoppingCart },
         { name: 'Sales', href: '/sales', icon: Truck },
-        { name: 'Reports', href: '/reports', icon: BarChart3 },
-        { name: 'City Reports', href: '/city-reports', icon: MapPin },
-        { name: 'Advanced Reports', href: '/reports/advanced', icon: TrendingUp }
+        { name: 'Suppliers', href: '/suppliers', icon: Building2 },
+        { name: 'Reports', href: '/reports', icon: BarChart3 }
+      );
+    }
+
+    // Add admin-only items
+    if (user?.role === 'admin') {
+      baseItems.push(
+        { name: 'Finance', href: '/finance', icon: DollarSign }
       );
     }
 
@@ -56,26 +64,26 @@ const Sidebar = ({ isMobileOpen, setIsMobileOpen }) => {
       baseItems.push(
         { name: 'My Tasks', href: '/tasks', icon: Activity },
         { name: 'Inventory', href: '/inventory', icon: Package },
-        { name: 'Reports', href: '/reports', icon: BarChart3 },
-        { name: 'City Reports', href: '/city-reports', icon: MapPin },
-        { name: 'Advanced Reports', href: '/reports/advanced', icon: TrendingUp }
+        { name: 'Reports', href: '/reports', icon: BarChart3 }
       );
     }
 
     // Add admin-only routes
     if (user?.role === 'admin') {
       baseItems.push(
-        { name: 'User Management', href: '/users', icon: Crown },
+        { name: 'User Management', href: '/users', icon: Users },
         { name: 'Settings', href: '/settings', icon: Settings }
       );
     }
 
+    // Managers don't get user management access at all
+
     // Add admin and manager routes
-    if (user?.role === 'admin' || user?.role === 'manager') {
-      baseItems.push(
-        { name: 'Suppliers', href: '/suppliers', icon: Building2 }
-      );
-    }
+    // if (user?.role === 'admin' || user?.role === 'manager') {
+    //   baseItems.push(
+    //     { name: 'Suppliers', href: '/suppliers', icon: Building2 }
+    //   );
+    // }
 
     return baseItems;
   };

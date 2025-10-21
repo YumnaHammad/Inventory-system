@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
 import api from '../../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -28,6 +29,7 @@ import CenteredLoader from '../../../components/CenteredLoader';
 
 const ProductList = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -198,13 +200,15 @@ const ProductList = () => {
               List
             </button>
           </div>
-          <button
-            onClick={() => navigate('/products/new')}
-            className="btn-primary flex items-center flex-1 sm:flex-initial justify-center"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Product
-          </button>
+          {user?.role === 'admin' && (
+            <button
+              onClick={() => navigate('/products/new')}
+              className="btn-primary flex items-center flex-1 sm:flex-initial justify-center"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Product
+            </button>
+          )}
         </div>
       </div>
 
@@ -288,20 +292,24 @@ const ProductList = () => {
                     >
                       <Eye className="h-4 w-4" />
                     </button>
-                    <button
-                      onClick={() => navigate(`/products/${product._id}/edit`)}
-                      className="text-gray-400 hover:text-blue-600 transition-colors"
-                      title="Edit Product"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => openDeleteModal(product)}
-                      className="text-gray-400 hover:text-red-600 transition-colors"
-                      title="Delete Product"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {user?.role === 'admin' && (
+                      <>
+                        <button
+                          onClick={() => navigate(`/products/${product._id}/edit`)}
+                          className="text-gray-400 hover:text-blue-600 transition-colors"
+                          title="Edit Product"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => openDeleteModal(product)}
+                          className="text-gray-400 hover:text-red-600 transition-colors"
+                          title="Delete Product"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -373,11 +381,13 @@ const ProductList = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Category
                   </th>
-                  {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cost / Variants
-                  </th> */}
+                  {user?.role === 'admin' && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Cost Price
+                    </th>
+                  )}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price / Variants
+                    Selling Price
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Stock
@@ -418,19 +428,21 @@ const ProductList = () => {
                           <span className="text-sm text-gray-900">{product.category}</span>
                         </div>
                       </td>
-                      {/* <td className="px-6 py-4 whitespace-nowrap">
-                        {product.hasVariants && product.variants && product.variants.length > 0 ? (
-                          <div className="flex items-center">
-                            <Grid3X3 className="h-4 w-4 text-blue-600 mr-2" />
-                            <span className="text-sm font-semibold text-blue-600">{product.variants.length} Variants</span>
-                          </div>
-                        ) : (
-                        <div className="flex items-center">
-                          <DollarSign className="h-4 w-4 text-gray-400 mr-2" />
-                          <span className="text-sm font-medium text-gray-900">PKR {product.costPrice}</span>
-                        </div>
-                        )}
-                      </td> */}
+                      {user?.role === 'admin' && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {product.hasVariants && product.variants && product.variants.length > 0 ? (
+                            <div className="flex items-center">
+                              <Grid3X3 className="h-4 w-4 text-blue-600 mr-2" />
+                              <span className="text-sm font-semibold text-blue-600">{product.variants.length} Variants</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center">
+                              <DollarSign className="h-4 w-4 text-gray-400 mr-2" />
+                              <span className="text-sm font-medium text-gray-900">PKR {product.costPrice || 0}</span>
+                            </div>
+                          )}
+                        </td>
+                      )}
                       <td className="px-6 py-4 whitespace-nowrap">
                         {product.hasVariants && product.variants && product.variants.length > 0 ? (
                           <div className="flex items-center">
@@ -466,20 +478,24 @@ const ProductList = () => {
                           >
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button
-                            onClick={() => navigate(`/products/${product._id}/edit`)}
-                            className="text-gray-400 hover:text-blue-600 transition-colors p-1 hover:bg-blue-50 rounded"
-                            title="Edit Product"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => openDeleteModal(product)}
-                            className="text-gray-400 hover:text-red-600 transition-colors p-1 hover:bg-red-50 rounded"
-                            title="Delete Product"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {user?.role === 'admin' && (
+                            <>
+                              <button
+                                onClick={() => navigate(`/products/${product._id}/edit`)}
+                                className="text-gray-400 hover:text-blue-600 transition-colors p-1 hover:bg-blue-50 rounded"
+                                title="Edit Product"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => openDeleteModal(product)}
+                                className="text-gray-400 hover:text-red-600 transition-colors p-1 hover:bg-red-50 rounded"
+                                title="Delete Product"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </motion.tr>

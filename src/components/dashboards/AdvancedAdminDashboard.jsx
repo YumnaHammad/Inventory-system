@@ -441,11 +441,11 @@ const AdvancedAdminDashboard = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="px-4 md:px-6 py-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">Advanced Dashboard</h1>
-              <p className="text-sm sm:text-base text-gray-600 truncate">Real-time inventory management analytics</p>
+              <h1 className="text-2xl font-bold text-gray-900 truncate">Advanced Dashboard</h1>
+              <p className="text-base text-gray-600 truncate">Real-time inventory management analytics</p>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
               {/* Time Range Selector */}
@@ -480,9 +480,9 @@ const AdvancedAdminDashboard = () => {
         </div>
       </div>
 
-      <div className="p-3 sm:p-4 md:p-6">
+      <div className="p-3 md:p-4">
         {/* Navigation Tabs */}
-        <div className="flex overflow-x-auto space-x-1 mb-4 sm:mb-6 bg-white rounded-lg p-1 shadow-sm custom-scrollbar">
+        <div className="flex overflow-x-auto space-x-1 mb-4 bg-white rounded-lg p-1 shadow-sm custom-scrollbar">
           {['overview', 'analytics', 'inventory', 'sales', 'users', 'reports'].map((tab) => (
             <button
               key={tab}
@@ -500,9 +500,9 @@ const AdvancedAdminDashboard = () => {
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
-          <div className="space-y-4 sm:space-y-5 md:space-y-6">
+          <div className="space-y-4">
             {/* Real-time Metrics */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -550,7 +550,7 @@ const AdvancedAdminDashboard = () => {
             </div>
 
             {/* Main Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               <StatCard
                 title="Total Products"
                 value={dashboardData.summary.totalProducts}
@@ -593,13 +593,13 @@ const AdvancedAdminDashboard = () => {
             </div>
 
             {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
               {/* Sales Trend Chart */}
               <ChartCard 
                 title="Sales Trend (30 Days)"
                 onClick={() => window.location.href = '/reports/advanced'}
               >
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <LineChart data={chartData.salesTrend}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                     <XAxis dataKey="date" stroke="#6B7280" style={{ fontSize: '12px' }} />
@@ -640,7 +640,7 @@ const AdvancedAdminDashboard = () => {
                 title="Inventory Overview"
                 onClick={() => window.location.href = '/warehouses'}
               >
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <RechartsPieChart>
                     <Pie
                       data={[
@@ -716,7 +716,7 @@ const AdvancedAdminDashboard = () => {
               title="Warehouse Performance"
               onClick={() => window.location.href = '/warehouses'}
             >
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={chartData.warehousePerformance} barGap={8}>
                   <defs>
                     <linearGradient id="colorUtilization" x1="0" y1="0" x2="0" y2="1">
@@ -830,7 +830,7 @@ const AdvancedAdminDashboard = () => {
           <div className="space-y-4 sm:space-y-5 md:space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
               <ChartCard title="Financial Performance">
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <AreaChart data={chartData.financialMetrics}>
                     <defs>
                       <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -861,7 +861,7 @@ const AdvancedAdminDashboard = () => {
               </ChartCard>
 
               <ChartCard title="User Activity">
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <LineChart data={chartData.userActivity}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                     <XAxis dataKey="date" stroke="#6B7280" style={{ fontSize: '12px' }} />
@@ -904,7 +904,7 @@ const AdvancedAdminDashboard = () => {
               </ChartCard>
 
               <ChartCard title="Product Performance">
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={chartData.productPerformance.slice(0, 8)}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
@@ -922,9 +922,9 @@ const AdvancedAdminDashboard = () => {
 
         {/* Inventory Tab */}
         {activeTab === 'inventory' && (
-          <div className="space-y-4 sm:space-y-5 md:space-y-6">
+          <div className="space-y-4">
             {/* Inventory Overview */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               <StatCard
                 title="Total Products"
                 value={dashboardData.summary.totalProducts}
@@ -965,7 +965,7 @@ const AdvancedAdminDashboard = () => {
                 title="Inventory Distribution"
                 onClick={() => window.location.href = '/warehouses'}
               >
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <RechartsPieChart>
                     <Pie
                       data={[
@@ -994,7 +994,7 @@ const AdvancedAdminDashboard = () => {
                 title="Warehouse Performance"
                 onClick={() => window.location.href = '/warehouses'}
               >
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={chartData.warehousePerformance}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
@@ -1055,7 +1055,7 @@ const AdvancedAdminDashboard = () => {
                 title="Sales Trend"
                 onClick={() => window.location.href = '/reports/advanced'}
               >
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <LineChart data={chartData.salesTrend}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
@@ -1072,7 +1072,7 @@ const AdvancedAdminDashboard = () => {
                 title="Top Selling Products"
                 onClick={() => window.location.href = '/products'}
               >
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={chartData.productPerformance.slice(0, 5)}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
@@ -1090,9 +1090,9 @@ const AdvancedAdminDashboard = () => {
 
         {/* Users Tab */}
         {activeTab === 'users' && (
-          <div className="space-y-4 sm:space-y-5 md:space-y-6">
+          <div className="space-y-4">
             {/* User Overview */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               <StatCard
                 title="Total Users"
                 value={dashboardData.summary.totalUsers}
@@ -1133,7 +1133,7 @@ const AdvancedAdminDashboard = () => {
                 title="User Activity"
                 onClick={() => window.location.href = '/users/advanced'}
               >
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <LineChart data={chartData.userActivity}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
@@ -1150,7 +1150,7 @@ const AdvancedAdminDashboard = () => {
                 title="User Roles Distribution"
                 onClick={() => window.location.href = '/users/advanced'}
               >
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <RechartsPieChart>
                     <Pie
                       data={[
@@ -1223,7 +1223,7 @@ const AdvancedAdminDashboard = () => {
                 title="Report Generation Trend"
                 onClick={() => window.location.href = '/reports/advanced'}
               >
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <AreaChart data={chartData.financialMetrics}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
@@ -1240,7 +1240,7 @@ const AdvancedAdminDashboard = () => {
                 title="Report Categories"
                 onClick={() => window.location.href = '/reports/advanced'}
               >
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={[
                     { name: 'Financial', count: 12 },
                     { name: 'Inventory', count: 8 },

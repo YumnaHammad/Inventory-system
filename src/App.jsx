@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Layout, ProtectedRoute, Dashboard, LoginForm } from './modules';
 import RoleBasedRoute from './components/RoleBasedRoute';
+import RoleBasedDashboard from './components/RoleBasedDashboard';
 import Login from './pages/Login';
 import RegisterForm from './modules/auth/components/RegisterForm';
 import Products from './pages/Products';
@@ -27,6 +28,8 @@ import AdvancedReports from './pages/AdvancedReports';
 import Suppliers from './pages/Suppliers';
 import ExpectedReturns from './pages/ExpectedReturns';
 import CityReports from './pages/CityReports';
+import Finance from './pages/Finance';
+import Unauthorized from './pages/Unauthorized';
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -49,12 +52,12 @@ function AppRoutes() {
           </ProtectedRoute>
         } 
       >
-        {/* Advanced Dashboard for Admin */}
+        {/* Dashboard - Role-based */}
         <Route 
           index 
           element={
-            <RoleBasedRoute allowedRoles={['admin']}>
-              <AdvancedAdminDashboard />
+            <RoleBasedRoute allowedRoles={['admin', 'manager']}>
+              <RoleBasedDashboard />
             </RoleBasedRoute>
           } 
         />
@@ -76,20 +79,49 @@ function AppRoutes() {
         <Route path="sales/new" element={<Sales />} />
         <Route path="purchases" element={<Purchases />} />
         <Route path="purchases/new" element={<Purchases />} />
+        <Route 
+          path="finance" 
+          element={
+            <RoleBasedRoute allowedRoles={['admin']}>
+              <Finance />
+            </RoleBasedRoute>
+          } 
+        />
         
         {/* Search */}
         <Route path="search" element={<SearchResults />} />
         
         {/* Reports */}
-        <Route path="reports" element={<Reports />} />
-        <Route path="city-reports" element={<CityReports />} />
-        <Route path="reports/advanced" element={<AdvancedReports />} />
+        <Route 
+          path="reports" 
+          element={
+            <RoleBasedRoute allowedRoles={['admin', 'manager']}>
+              <Reports />
+            </RoleBasedRoute>
+          } 
+        />
+        <Route 
+          path="city-reports" 
+          element={
+            <RoleBasedRoute allowedRoles={['admin', 'manager']}>
+              <CityReports />
+            </RoleBasedRoute>
+          } 
+        />
+        <Route 
+          path="reports/advanced" 
+          element={
+            <RoleBasedRoute allowedRoles={['admin']}>
+              <AdvancedReports />
+            </RoleBasedRoute>
+          } 
+        />
         
         {/* User Management */}
         <Route 
           path="users" 
           element={
-            <RoleBasedRoute allowedRoles={['admin']}>
+            <RoleBasedRoute allowedRoles={['admin', 'manager']}>
               <AdvancedUserManagement />
             </RoleBasedRoute>
           } 
@@ -121,6 +153,9 @@ function AppRoutes() {
           } 
         />
         
+        {/* Unauthorized Page */}
+        <Route path="unauthorized" element={<Unauthorized />} />
+        
         {/* Suppliers */}
         <Route 
           path="suppliers" 
@@ -141,7 +176,7 @@ function AppRoutes() {
         <Route 
           path="suppliers/add" 
           element={
-            <RoleBasedRoute allowedRoles={['admin', 'manager']}>
+            <RoleBasedRoute allowedRoles={['admin']}>
               <SupplierFormPage />
             </RoleBasedRoute>
           } 
@@ -149,7 +184,7 @@ function AppRoutes() {
         <Route 
           path="suppliers/edit/:id" 
           element={
-            <RoleBasedRoute allowedRoles={['admin', 'manager']}>
+            <RoleBasedRoute allowedRoles={['admin']}>
               <SupplierFormPage />
             </RoleBasedRoute>
           } 

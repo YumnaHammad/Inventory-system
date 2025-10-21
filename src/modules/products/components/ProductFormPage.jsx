@@ -20,7 +20,7 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
     sku: '',
     category: '',
     unit: 'pcs',
-    // costPrice: '',
+    costPrice: '',
     sellingPrice: '',
     description: '',
     hasVariants: false
@@ -46,7 +46,7 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
         sku: product.sku || '',
         category: product.category || '',
         unit: product.unit || 'pcs',
-        // costPrice: product.costPrice || '',
+        costPrice: product.costPrice || '',
         sellingPrice: product.sellingPrice || '',
         description: product.description || '',
         hasVariants: product.hasVariants || false
@@ -288,7 +288,7 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
         name: variantName,
         sku: variantSKU,
         attributes: combination,
-        // costPrice: formData.costPrice || '',
+        costPrice: user?.role === 'admin' ? (formData.costPrice || '') : '',
         sellingPrice: formData.sellingPrice || '',
         stock: 0
       };
@@ -425,7 +425,7 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
           </div>
 
           {/* Cost Price - Admin Only - Hidden when using variants */}
-          {/* {!showVariants && user?.role === 'admin' && (
+          {!showVariants && user?.role === 'admin' && (
             <div>
               <label htmlFor="costPrice" className="block text-sm font-medium text-gray-700 mb-3">
                 Cost Price (PKR) *
@@ -443,7 +443,7 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
                 onChange={handleChange}
               />
             </div>
-          )} */}
+          )}
 
           {/* Selling Price - Disabled when variants are active */}
           <div>
@@ -461,13 +461,13 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
               className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
                 showVariants ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
               }`}
-              placeholder={showVariants ? 'Disabled - Set price for each variant below' : 'Enter selling price'}
+              placeholder={showVariants ? `Disabled - Set ${user?.role === 'admin' ? 'cost and selling' : 'selling'} price for each variant below` : 'Enter selling price'}
               value={formData.sellingPrice}
               onChange={handleChange}
             />
             {showVariants && (
               <p className="mt-1 text-xs text-gray-500">
-                ℹ️ This field is disabled. Set the price for each variant below.
+                ℹ️ This field is disabled. Set the {user?.role === 'admin' ? 'cost and selling' : 'selling'} price for each variant below.
               </p>
             )}
           </div>
@@ -514,7 +514,7 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
             {showVariants && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-800">
-                  <strong>💡 Note:</strong> When using variants, selling prices are set individually for each variant below. 
+                  <strong>💡 Note:</strong> When using variants, {user?.role === 'admin' ? 'cost and selling' : 'selling'} prices are set individually for each variant below. 
                   The base product price fields are hidden.
                 </p>
               </div>
@@ -629,8 +629,8 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
                             <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          {/* {user?.role === 'admin' && (
+                        <div className={`grid gap-3 ${user?.role === 'admin' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                          {user?.role === 'admin' && (
                             <div>
                               <label className="text-xs text-gray-600">Cost Price (PKR)</label>
                               <input
@@ -642,7 +642,7 @@ const ProductFormPage = ({ product, onSubmit, onClose }) => {
                                 placeholder="0.00"
                               />
                             </div>
-                          )} */}
+                          )}
                           <div>
                             <label className="text-xs text-gray-600">Selling Price (PKR)</label>
                             <input

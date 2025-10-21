@@ -18,8 +18,12 @@ const PurchaseFormPage = ({ onSuccess }) => {
     expectedDeliveryDate: '',
     notes: '',
     paymentMethod: 'cash',
+    paymentTerms: 'immediate',
     taxAmount: 0,
     discountAmount: 0,
+    discountType: 'percentage',
+    advancePayment: 0,
+    advancePaymentDate: '',
     items: []
   });
   const [validationErrors, setValidationErrors] = useState({});
@@ -314,10 +318,37 @@ const PurchaseFormPage = ({ onSuccess }) => {
                   onChange={handleChange}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
-                  <option value="cash">Cash</option>
-                  <option value="bank_transfer">Bank Transfer</option>
-                  <option value="check">Check</option>
-                  <option value="credit_card">Credit Card</option>
+                  <option value="cash">💵 Cash</option>
+                  <option value="bank_transfer">🏦 Bank Transfer</option>
+                  <option value="check">📝 Check</option>
+                  <option value="credit_card">💳 Credit Card</option>
+                  <option value="debit_card">💳 Debit Card</option>
+                  <option value="mobile_payment">📱 Mobile Payment (JazzCash, EasyPaisa)</option>
+                  <option value="online_transfer">🌐 Online Transfer</option>
+                  <option value="letter_of_credit">📄 Letter of Credit</option>
+                  <option value="bank_draft">🏦 Bank Draft</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment Terms
+                </label>
+                <select
+                  name="paymentTerms"
+                  value={formData.paymentTerms}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="immediate">⚡ Immediate Payment</option>
+                  <option value="net_7">📅 Net 7 Days</option>
+                  <option value="net_15">📅 Net 15 Days</option>
+                  <option value="net_30">📅 Net 30 Days</option>
+                  <option value="net_45">📅 Net 45 Days</option>
+                  <option value="net_60">📅 Net 60 Days</option>
+                  <option value="on_delivery">🚚 Payment on Delivery</option>
+                  <option value="partial">💰 Partial Payment</option>
+                  <option value="custom">📋 Custom Terms</option>
                 </select>
               </div>
 
@@ -339,7 +370,22 @@ const PurchaseFormPage = ({ onSuccess }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Discount Amount (PKR)
+                  Discount Type
+                </label>
+                <select
+                  name="discountType"
+                  value={formData.discountType}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="percentage">% Percentage</option>
+                  <option value="fixed">PKR Fixed Amount</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {formData.discountType === 'percentage' ? 'Discount Percentage (%)' : 'Discount Amount (PKR)'}
                 </label>
                 <input
                   type="number"
@@ -347,11 +393,58 @@ const PurchaseFormPage = ({ onSuccess }) => {
                   value={formData.discountAmount}
                   onChange={handleChange}
                   min="0"
+                  max={formData.discountType === 'percentage' ? 100 : undefined}
+                  step={formData.discountType === 'percentage' ? 0.1 : 0.01}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder={formData.discountType === 'percentage' ? "0.0" : "0.00"}
+                />
+                {formData.discountType === 'percentage' && formData.totalAmount > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Discount: PKR {((formData.totalAmount * formData.discountAmount) / 100).toFixed(2)}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Advance Payment (PKR)
+                </label>
+                <input
+                  type="number"
+                  name="advancePayment"
+                  value={formData.advancePayment}
+                  onChange={handleChange}
+                  min="0"
                   step="0.01"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="0.00"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Half payment before receiving goods from supplier
+                </p>
+                {formData.advancePayment > 0 && (
+                  <div className="mt-2 p-2 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <span className="font-medium">Remaining Payment:</span> PKR {(formData.totalAmount + (formData.taxAmount || 0) - (formData.discountAmount || 0) - formData.advancePayment).toFixed(2)}
+                    </p>
+                  </div>
+                )}
               </div>
+
+              {formData.advancePayment > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Advance Payment Date
+                  </label>
+                  <input
+                    type="date"
+                    name="advancePaymentDate"
+                    value={formData.advancePaymentDate}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+              )}
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">

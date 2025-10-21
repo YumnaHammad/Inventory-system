@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import AdminDashboard from './dashboards/AdminDashboard';
+import AdvancedAdminDashboard from './dashboards/AdvancedAdminDashboard';
 import ManagerDashboard from './dashboards/ManagerDashboard';
 import EmployeeDashboard from './dashboards/EmployeeDashboard';
 
@@ -13,7 +13,7 @@ const RoleBasedDashboard = () => {
 
   switch (user.role) {
     case 'admin':
-      return <AdminDashboard />;
+      return <AdvancedAdminDashboard />;
     case 'manager':
       return <ManagerDashboard />;
     case 'employee':

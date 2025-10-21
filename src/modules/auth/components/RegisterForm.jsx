@@ -3,6 +3,7 @@ import { Navigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { Package, Eye, EyeOff, Loader2, UserPlus } from 'lucide-react';
+import api from '../../../services/api';
 
 const RegisterForm = () => {
   const [formData, setFormData] = useState({
@@ -10,7 +11,7 @@ const RegisterForm = () => {
     lastName: '',
     email: '',
     password: '',
-    role: 'user'
+    role: 'manager'
   });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -90,38 +91,28 @@ const RegisterForm = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('https://backendsystem-one.vercel.app/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          firstName: formData.firstName.trim(),
-          lastName: formData.lastName.trim(),
-          email: formData.email.trim().toLowerCase(),
-          password: formData.password,
-          role: formData.role
-        }),
+      const response = await api.post('/auth/register', {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+        role: formData.role
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success('Registration successful! You can now sign in.');
+      if (response.data) {
+        toast.success('Manager account created successfully! You can now sign in.');
         // Reset form
         setFormData({
           firstName: '',
           lastName: '',
           email: '',
           password: '',
-          role: 'user'
+          role: 'manager'
         });
-      } else {
-        toast.error(data.error || 'Registration failed');
       }
     } catch (error) {
       console.error('Registration error:', error);
-      toast.error('Network error. Please try again.');
+      toast.error(error.response?.data?.error || 'Registration failed. Please try again.');
     }
     
     setLoading(false);
@@ -136,10 +127,10 @@ const RegisterForm = () => {
             <UserPlus className="h-8 w-8 text-white" />
           </div>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            Create Account
+            Create Manager Account
           </h2>
           <p className="mt-2 text-gray-600">
-            Join the inventory management system
+            Register a new manager for the inventory management system
           </p>
         </div>
 
@@ -241,7 +232,7 @@ const RegisterForm = () => {
             </div>
 
 
-            {/* Role Field */}
+            {/* Role Field - Only Manager */}
             <div>
               <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
                 Role
@@ -252,11 +243,13 @@ const RegisterForm = () => {
                 className="input-field"
                 value={formData.role}
                 onChange={handleChange}
+                disabled
               >
-                <option value="user">User</option>
-                <option value="employee">Employee</option>
                 <option value="manager">Manager</option>
               </select>
+              <p className="mt-1 text-sm text-blue-600">
+                Only Manager accounts can be created through registration
+              </p>
             </div>
 
             {/* Submit Button */}
@@ -269,10 +262,10 @@ const RegisterForm = () => {
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creating Account...
+                    Creating Manager...
                   </>
                 ) : (
-                  'Create Account'
+                  'Create Manager Account'
                 )}
               </button>
             </div>
@@ -302,7 +295,7 @@ const RegisterForm = () => {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-green-700 font-medium">Available Roles:</span>
-              <span className="text-green-600">User, Employee, Manager</span>
+              <span className="text-green-600">Manager Only</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-green-700 font-medium">Status:</span>

@@ -275,7 +275,8 @@ const SalesFormPage = ({ onSuccess }) => {
               const totalStock = (stockItem.quantity || 0);
               const reserved = (stockItem.reservedQuantity || 0);
               const delivered = (stockItem.deliveredQuantity || 0);
-              const available = totalStock - reserved - delivered;
+              const confirmedDelivered = (stockItem.confirmedDeliveredQuantity || 0);
+              const available = totalStock - reserved - delivered - confirmedDelivered;
               totalAvailableStock += Math.max(0, available);
             }
           });
@@ -370,7 +371,15 @@ const SalesFormPage = ({ onSuccess }) => {
 
     setLoading(true);
     try {
-      const response = await api.post('/sales', formData);
+      // Transform the data to include customerName at the top level
+      const salesData = {
+        ...formData,
+        customerName: formData.customerInfo.name,
+        customerEmail: formData.customerInfo.email,
+        customerPhone: formData.customerInfo.phone
+      };
+      
+      const response = await api.post('/sales', salesData);
       const newSale = response.data.salesOrder;
       
       // Show success message with more details

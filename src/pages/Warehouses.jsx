@@ -446,6 +446,10 @@ const Warehouses = () => {
                 <span className="text-gray-600">Delivered (Out)</span>
               </div>
               <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-emerald-100 rounded"></div>
+                <span className="text-gray-600">Confirmed Delivered</span>
+              </div>
+              <div className="flex items-center gap-1">
                 <div className="w-3 h-3 bg-purple-100 rounded"></div>
                 <span className="text-gray-600">Expected Return (Not received yet)</span>
               </div>
@@ -490,6 +494,12 @@ const Warehouses = () => {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <div className="flex items-center gap-1">
+                        Confirmed Delivered
+                        <span className="text-gray-400" title="Items confirmed as delivered (cannot be returned)">✓</span>
+                      </div>
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <div className="flex items-center gap-1">
                         Expected Return
                         <span className="text-gray-400" title="Items marked for return but not yet received back">⏳</span>
                       </div>
@@ -528,6 +538,7 @@ const Warehouses = () => {
                           quantity: 0,
                           reservedQuantity: 0,
                           deliveredQuantity: 0,
+                          confirmedDeliveredQuantity: 0,
                           expectedReturns: 0,
                           returnedQuantity: 0,
                           // Store the display names for consistent display
@@ -541,6 +552,7 @@ const Warehouses = () => {
                       mergedStock[key].quantity += (stockItem.quantity || 0);
                       mergedStock[key].reservedQuantity += (stockItem.reservedQuantity || 0);
                       mergedStock[key].deliveredQuantity += (stockItem.deliveredQuantity || 0);
+                      mergedStock[key].confirmedDeliveredQuantity += (stockItem.confirmedDeliveredQuantity || 0);
                       mergedStock[key].expectedReturns += (stockItem.expectedReturns || 0);
                       mergedStock[key].returnedQuantity += (stockItem.returnedQuantity || 0);
                     });
@@ -582,7 +594,7 @@ const Warehouses = () => {
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                           <span className="text-sm font-bold text-orange-600">{stockItem.reservedQuantity || 0}</span>
-                          <span className="text-xs text-gray-500">pending</span>
+                          <span className="text-xs text-gray-500">dispatched</span>
                         </div>
                         {(stockItem.reservedQuantity || 0) === 0 && (
                           <span className="text-xs text-green-600 italic">✓ None reserved</span>
@@ -598,6 +610,20 @@ const Warehouses = () => {
                           {(stockItem.deliveredQuantity || 0) > 0 && (
                             <span className="text-xs text-red-600 italic">
                               Delivered to customer
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-1">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="w-3 h-3 text-emerald-600" />
+                            <span className="text-sm font-bold text-emerald-600">{stockItem.confirmedDeliveredQuantity || 0}</span>
+                            <span className="text-xs text-gray-500">confirmed</span>
+                          </div>
+                          {(stockItem.confirmedDeliveredQuantity || 0) > 0 && (
+                            <span className="text-xs text-emerald-600 italic">
+                              Cannot return
                             </span>
                           )}
                         </div>
@@ -629,7 +655,7 @@ const Warehouses = () => {
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                           <span className="text-sm font-bold text-green-600">
-                            {(stockItem.quantity || 0) - (stockItem.reservedQuantity || 0) - (stockItem.deliveredQuantity || 0)}
+                            {(stockItem.quantity || 0) - (stockItem.reservedQuantity || 0) - (stockItem.deliveredQuantity || 0) - (stockItem.confirmedDeliveredQuantity || 0)}
                           </span>
                           <span className="text-xs text-gray-500">ready</span>
                         </div>
