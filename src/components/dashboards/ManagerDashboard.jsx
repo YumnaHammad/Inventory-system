@@ -58,29 +58,51 @@ const ManagerDashboard = () => {
 
       console.log('API Responses:', { productsRes, warehousesRes, salesRes, purchasesRes });
 
-      const products = productsRes.data.products || productsRes.data || [];
-      const warehouses = warehousesRes.data.warehouses || warehousesRes.data || [];
-      const sales = salesRes.data.sales || salesRes.data || [];
-      const purchases = purchasesRes.data.purchases || purchasesRes.data || [];
+      // Extract data based on actual API response structure
+      const products = productsRes.data?.products || [];
+      const warehouses = Array.isArray(warehousesRes.data) ? warehousesRes.data : warehousesRes.data?.warehouses || [];
+      const sales = salesRes.data?.salesOrders || []; // Sales API returns salesOrders
+      const purchases = purchasesRes.data?.purchases || [];
 
       console.log('Extracted data:', { products, warehouses, sales, purchases });
-
+      console.log('Data types:', { 
+        products: Array.isArray(products), 
+        warehouses: Array.isArray(warehouses), 
+        sales: Array.isArray(sales), 
+        purchases: Array.isArray(purchases) 
+      });
+      
       // Calculate today's sales and purchases
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
+      // Debug today's date filtering
+      console.log('Today date:', today);
+      console.log('Sample sales dates:', sales.slice(0, 2).map(s => ({
+        orderNumber: s.orderNumber,
+        orderDate: s.orderDate,
+        createdAt: s.createdAt,
+        isToday: new Date(s.orderDate || s.createdAt) >= today
+      })));
+      console.log('Sample purchase dates:', purchases.slice(0, 2).map(p => ({
+        purchaseNumber: p.purchaseNumber,
+        purchaseDate: p.purchaseDate,
+        createdAt: p.createdAt,
+        isToday: new Date(p.purchaseDate || p.createdAt) >= today
+      })));
+      
       const todaySales = sales.filter(sale => {
-        const saleDate = new Date(sale.createdAt);
+        const saleDate = new Date(sale.orderDate || sale.createdAt || sale.date);
         return saleDate >= today;
       });
 
       const todayPurchases = purchases.filter(purchase => {
-        const purchaseDate = new Date(purchase.createdAt);
+        const purchaseDate = new Date(purchase.purchaseDate || purchase.createdAt || purchase.date);
         return purchaseDate >= today;
       });
 
       // Calculate low stock products
-      const lowStockProducts = products.filter(p => p.currentStock <= 5);
+      const lowStockProducts = products.filter(p => (p.currentStock || p.stock || 0) <= 5);
 
       // Get recent sales and purchases (last 5)
       const recentSalesData = sales.slice(0, 5);
@@ -92,7 +114,7 @@ const ManagerDashboard = () => {
         totalSales: sales.length,
         totalPurchases: purchases.length,
         lowStockProducts: lowStockProducts.length,
-        pendingOrders: sales.filter(s => s.status === 'pending').length,
+        pendingOrders: sales.filter(s => s.status === 'pending' || s.status === 'processing').length,
         todaySales: todaySales.length,
         todayPurchases: todayPurchases.length
       });
