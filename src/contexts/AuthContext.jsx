@@ -31,6 +31,7 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         try {
           const response = await api.get('/auth/profile');
+          // Backend returns user object directly, not wrapped in { user: ... }
           setUser(response.data);
         } catch (error) {
           console.error('Auth check failed:', error);

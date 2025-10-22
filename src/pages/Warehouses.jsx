@@ -66,12 +66,24 @@ const Warehouses = () => {
   const fetchWarehouses = async () => {
     try {
       const response = await api.get('/warehouses');
+      console.log('Warehouses API response:', response.data);
+      
+      // Handle different response structures
+      let warehousesData = [];
+      if (response.data) {
+        if (Array.isArray(response.data)) {
+          warehousesData = response.data;
+        } else if (response.data.warehouses && Array.isArray(response.data.warehouses)) {
+          warehousesData = response.data.warehouses;
+        }
+      }
+      
       // Sort by creation date - newest first
-      const sortedWarehouses = (response.data || []).sort((a, b) => {
+      const sortedWarehouses = warehousesData.sort((a, b) => {
         return new Date(b.createdAt || b._id) - new Date(a.createdAt || a._id);
       });
       setWarehouses(sortedWarehouses);
-      console.log('Warehouses fetched:', response.data?.length || 0);
+      console.log('Warehouses fetched:', warehousesData.length);
     } catch (error) {
       console.error('Error fetching warehouses:', error);
       toast.error('Failed to load warehouses');

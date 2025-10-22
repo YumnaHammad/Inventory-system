@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate, useLocation, Link } from 'react-router-dom';
+import { Navigate, useLocation, Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Package, Eye, EyeOff, Loader2 } from 'lucide-react';
 import api from '../../../services/api'; // ✅ import your axios instance
@@ -15,6 +15,7 @@ const LoginForm = () => {
 
   const { user, login } = useAuth(); // from context to save user globally
   const location = useLocation();
+  const navigate = useNavigate();
   const from = location.state?.from?.pathname || '/';
 
   // ✅ Redirect if already logged in
@@ -41,8 +42,8 @@ const LoginForm = () => {
       if (result.success) {
         toast.success('Login successful!');
         setFormData({ email: '', password: '' });
-        // Navigate to the intended page
-        window.location.href = from;
+        // Navigate to the intended page using React Router
+        navigate(from, { replace: true });
       } else {
         toast.error(result.error || 'Login failed');
       }
