@@ -1,8 +1,22 @@
 import axios from 'axios';
 
 // Create axios instance with base configuration
+// Smart detection: Use Vercel backend in production, localhost in development
+const getBaseURL = () => {
+  // If we're on Vercel (production), use Vercel backend
+  if (window.location.hostname.includes('vercel.app')) {
+    return 'https://backendsystem-gamma.vercel.app/api';
+  }
+  // If we're on localhost (development), use local backend
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:5000/api';
+  }
+  // Fallback to environment variable or Vercel backend
+  return import.meta.env.VITE_API_URL || 'https://backendsystem-gamma.vercel.app/api';
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },
